@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -138,7 +139,16 @@ void __init msm8930_init_gpu(void);
 #define MSM_8930_GSBI4_QUP_I2C_BUS_ID 4
 #define MSM_8930_GSBI9_QUP_I2C_BUS_ID 0
 #define MSM_8930_GSBI10_QUP_I2C_BUS_ID 10
+
+//
+// , 20120708, [ ] Porting sensor. GSBI_1 config
+//
+#if 1
+#define MSM_8930_GSBI1_QUP_I2C_BUS_ID 1
 #define MSM_8930_GSBI12_QUP_I2C_BUS_ID 12
+#endif
+// 
+
 
 extern struct msm_rtb_platform_data msm8930_rtb_pdata;
 extern struct msm_cache_dump_platform_data msm8930_cache_dump_pdata;

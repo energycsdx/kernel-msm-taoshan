@@ -26,6 +26,7 @@
 #define SLIM_HDL_TO_PORT(hdl)	((u32)(hdl) & 0xFF)
 
 #define SLIM_HDL_TO_CHIDX(hdl)	((u16)(hdl) & 0xFF)
+#define SLIM_GRP_TO_NCHAN(hdl)	((u16)(hdl >> 8) & 0xFF)  // AUD_MOD QCT
 
 #define SLIM_SLAVE_PORT(p, la)	(((la)<<16) | (p))
 #define SLIM_MGR_PORT(p)	((0xFF << 16) | (p))
@@ -1766,7 +1767,11 @@ int slim_define_ch(struct slim_device *sb, struct slim_ch *prop, u16 *chanh,
 	}
 
 	if (grp)
+		#if 0  // AUD_MOD QCT
 		*grph = chanh[0];
+		#else
+		*grph = ((nchan << 8) | SLIM_HDL_TO_CHIDX(chanh[0]));
+		#endif
 	for (i = 0; i < nchan; i++) {
 		u8 chan = SLIM_HDL_TO_CHIDX(chanh[i]);
 		struct slim_ich *slc = &ctrl->chans[chan];
@@ -2781,6 +2786,7 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 	int ret = 0;
 	/* Get rid of the group flag in MSB if any */
 	u8 chan = SLIM_HDL_TO_CHIDX(chanh);
+	u8 nchan = 0;  // AUD_MOD QCT
 	struct slim_ich *slc = &ctrl->chans[chan];
 	if (!(slc->nextgrp & SLIM_START_GRP))
 		return -EINVAL;
@@ -2788,6 +2794,11 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 	mutex_lock(&sb->sldev_reconf);
 	mutex_lock(&ctrl->m_ctrl);
 	do {
+		// AUD_MOD QCT s
+		struct slim_pending_ch *pch;
+		u8 add_mark_removal  = true;
+		// AUD_MOD QCT e
+
 		slc = &ctrl->chans[chan];
 		dev_dbg(&ctrl->dev, "chan:%d,ctrl:%d,def:%d", chan, chctrl,
 					slc->def);
@@ -2812,14 +2823,46 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 				ret = -ENOTCONN;
 				break;
 			}
-			ret = add_pending_ch(&sb->mark_removal, chan);
-			if (ret)
-				break;
+			// AUD_MOD QCT s
+			/* If channel removal request comes when pending
+			 * in the mark_define, remove it from the define
+			 * list instead of adding it to removal list
+			 */
+			if (!list_empty(&sb->mark_define)) {
+				struct list_head *pos, *next;
+				list_for_each_safe(pos, next,
+						  &sb->mark_define) {
+					pch = list_entry(pos,
+						struct slim_pending_ch,
+						pending);
+					if (pch->chan == slc->chan) {
+						list_del(&pch->pending);
+						kfree(pch);
+						add_mark_removal = false;
+						break;
+					}
+				}
+			}
+			if (add_mark_removal == true) {
+				ret = add_pending_ch(&sb->mark_removal, chan);
+				if (ret)
+					break;
+			}
+			// AUD_MOD QCT e
 		}
 
+		#if 0  // AUD_MOD  QCT
 		if (!(slc->nextgrp & SLIM_END_GRP))
+		#else
+		nchan++;
+		if (nchan < SLIM_GRP_TO_NCHAN(chanh))
+		#endif
 			chan = SLIM_HDL_TO_CHIDX(slc->nextgrp);
+	#if 0  // AUD_MOD  QCT
 	} while (!(slc->nextgrp & SLIM_END_GRP));
+	#else
+	} while (nchan < SLIM_GRP_TO_NCHAN(chanh));
+	#endif
 	mutex_unlock(&ctrl->m_ctrl);
 	if (!ret && commit == true)
 		ret = slim_reconfigure_now(sb);

@@ -71,3 +71,7 @@ obj-$(CONFIG_MSM_MEMORY_LOW_POWER_MODE_SUSPEND_DEEP_POWER_DOWN) \
 obj-$(CONFIG_PMIC8058_XOADC) += pmic8058-xoadc.o
 obj-$(CONFIG_QSEECOM) += qseecom.o
 obj-$(CONFIG_QFP_FUSE) += qfp_fuse.o
+obj-y	+= tsl2772.o
+
+# Robert, 20120904, SA77_CR656: add NFC feature and PN65O checking to BSP1214
+obj-$(CONFIG_NXP_NFC_PN65N)	+= pn65n.o

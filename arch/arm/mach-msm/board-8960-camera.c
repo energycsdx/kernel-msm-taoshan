@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -539,6 +540,46 @@ static struct msm_camera_sensor_info msm_camera_sensor_imx074_data = {
 	.eeprom_info = &imx074_eeprom_info,
 };
 
+//S JackBB 2012/12/3 [Q111M]
+static struct msm_camera_csi_lane_params imx134_csi_lane_params = {
+       .csi_lane_assign = 0xE4,
+       .csi_lane_mask = 0xF,
+};
+
+static struct msm_camera_sensor_flash_data flash_imx134 = {
+       .flash_type     = MSM_CAMERA_FLASH_NONE,
+};
+
+static struct msm_camera_sensor_platform_info sensor_board_info_imx134 = {
+       .mount_angle    = 90,
+       .cam_vreg = msm_8960_back_cam_vreg,
+       .num_vreg = ARRAY_SIZE(msm_8960_back_cam_vreg),
+       .gpio_conf = &msm_8960_back_cam_gpio_conf,
+       .csi_lane_params = &imx134_csi_lane_params,
+};
+
+static struct i2c_board_info imx134_eeprom_i2c_info = {
+       I2C_BOARD_INFO("imx134_eeprom", 0x18), //Lokesh: TODO eeprom slave addr.
+};
+
+static struct msm_eeprom_info imx134_eeprom_info = {
+       .board_info     = &imx134_eeprom_i2c_info,
+       .bus_id         = MSM_8960_GSBI4_QUP_I2C_BUS_ID,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_imx134_data = {
+       .sensor_name    = "imx134",
+       .pdata  = &msm_camera_csi_device_data[0],
+       .flash_data     = &flash_imx134,
+       .sensor_platform_info = &sensor_board_info_imx134,
+       .csi_if = 1,
+       .camera_type = BACK_CAMERA_2D,
+       .sensor_type = BAYER_SENSOR,
+       //.actuator_info = &msm_act_main_cam_1_info,  //Lokesh: TODO change the actuator number.
+       .eeprom_info = &imx134_eeprom_info,
+};
+//E JackBB 2012/12/3 [Q111M]
+
 static struct camera_vreg_t msm_8960_mt9m114_vreg[] = {
 	{"cam_vio", REG_VS, 0, 0, 0},
 	{"cam_vdig", REG_LDO, 1200000, 1200000, 105000},
@@ -781,7 +822,9 @@ static struct i2c_board_info msm8960_camera_i2c_boardinfo[] = {
 	.platform_data = &msm_camera_sensor_mt9m114_data,
 	},
 	{
-	I2C_BOARD_INFO("s5k3l1yx", 0x20),
+//S JackBB 2012/12/3 [Q111M]
+	I2C_BOARD_INFO("s5k3l1yx", 0x40), // TODO: Lokesh: changed from 0x20 to 0x40
+//E JackBB 2012/12/3 [Q111M]
 	.platform_data = &msm_camera_sensor_s5k3l1yx_data,
 	},
 #ifdef CONFIG_MSM_CAMERA_FLASH_SC628A
@@ -793,6 +836,12 @@ static struct i2c_board_info msm8960_camera_i2c_boardinfo[] = {
 	I2C_BOARD_INFO("imx091", 0x34),
 	.platform_data = &msm_camera_sensor_imx091_data,
 	},
+//S JackBB 2012/12/3 [Q111M]
+       {
+       I2C_BOARD_INFO("imx134", 0x20),
+       .platform_data = &msm_camera_sensor_imx134_data,
+       },
+//E JackBB 2012/12/3 [Q111M]
 };
 
 struct msm_camera_board_info msm8960_camera_board_info = {

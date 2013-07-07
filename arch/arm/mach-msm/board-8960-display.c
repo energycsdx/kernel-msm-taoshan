@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -573,9 +574,18 @@ static struct msm_bus_scale_pdata mdp_bus_scale_pdata = {
 
 #endif
 
+static int mdp_core_clk_rate_table[] = {
+	85330000,
+	128000000,
+	160000000,
+	200000000,
+};
+
 static struct msm_panel_common_pdata mdp_pdata = {
 	.gpio = MDP_VSYNC_GPIO,
-	.mdp_max_clk = 200000000,
+	.mdp_core_clk_rate = 85330000,
+	.mdp_core_clk_table = mdp_core_clk_rate_table,
+	.num_mdp_clk = ARRAY_SIZE(mdp_core_clk_rate_table),
 #ifdef CONFIG_MSM_BUS_SCALING
 	.mdp_bus_scale_table = &mdp_bus_scale_pdata,
 #endif
@@ -744,6 +754,7 @@ static struct platform_device wfd_device = {
 #endif
 
 #ifdef CONFIG_MSM_BUS_SCALING
+#ifdef CONFIG_FB_MSM_DTV //Taylor--20120725--B
 static struct msm_bus_vectors dtv_bus_init_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
@@ -796,6 +807,7 @@ static int hdmi_panel_power(int on)
 	return rc;
 }
 #endif
+#endif //Taylor--20120725--E
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 static int hdmi_enable_5v(int on)
@@ -1030,7 +1042,9 @@ void __init msm8960_init_fb(void)
 		msm_fb_register_device("mdp", &mdp_pdata);
 	msm_fb_register_device("mipi_dsi", &mipi_dsi_pdata);
 #ifdef CONFIG_MSM_BUS_SCALING
+#ifdef CONFIG_FB_MSM_DTV //Taylor--20120725--B
 	msm_fb_register_device("dtv", &dtv_pdata);
+#endif //Taylor--20120725--E
 #endif
 }
 
@@ -1062,10 +1076,12 @@ static void set_mdp_clocks_for_wuxga(void)
 	mdp_1080p_vectors[0].ab = 2000000000;
 	mdp_1080p_vectors[0].ib = 2000000000;
 
+#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL //Fix remove HDMI build failed--Taylor-B
 	if (hdmi_is_primary) {
 		dtv_bus_def_vectors[0].ab = 2000000000;
 		dtv_bus_def_vectors[0].ib = 2000000000;
 	}
+#endif //Taylor-E
 }
 
 void __init msm8960_set_display_params(char *prim_panel, char *ext_panel)

@@ -4320,7 +4320,7 @@ error1:
 static int hdmi_msm_power_ctrl(boolean enable)
 {
 	int rc   = 0;
-	int time = 0;
+	//int time = 0; //Taylor--20130124
 
 	if (enable) {
 		/*
@@ -4336,7 +4336,7 @@ static int hdmi_msm_power_ctrl(boolean enable)
 				DEV_ERR("%s: HPD ON FAILED\n", __func__);
 				return rc;
 			}
-
+		#if 0	//Taylor--20130124--B
 			/* Wait for HPD initialization to complete */
 			INIT_COMPLETION(hdmi_msm_state->hpd_event_processed);
 			time = wait_for_completion_interruptible_timeout(
@@ -4346,6 +4346,7 @@ static int hdmi_msm_power_ctrl(boolean enable)
 				queue_work(hdmi_work_queue,
 				    &hdmi_msm_state->hpd_state_work);
 			}
+		#endif	//Taylor--20130124--E
 		}
 	} else {
 		DEV_DBG("%s: Turning HPD ciruitry off\n", __func__);

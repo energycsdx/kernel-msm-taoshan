@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -45,13 +46,16 @@ int32_t msm_camera_eeprom_read_tbl(struct msm_eeprom_ctrl_t *ectrl,
 		return rc;
 
 	for (i = 0; i < tbl_size; i++) {
-		rc = msm_camera_eeprom_read
-			(ectrl, read_tbl[i].reg_addr,
-			read_tbl[i].dest_ptr, read_tbl[i].num_byte,
-			read_tbl[i].convert_endian);
-		if (rc < 0) {
-			pr_err("%s: read failed\n", __func__);
-			return rc;
+        if(read_tbl[i].reg_addr < 0xff)//JackBB 2012/10/17
+        {
+		    rc = msm_camera_eeprom_read
+			    (ectrl, read_tbl[i].reg_addr,
+			    read_tbl[i].dest_ptr, read_tbl[i].num_byte,
+			    read_tbl[i].convert_endian);
+		    if (rc < 0) {
+			    pr_err("%s: read failed\n", __func__);
+			    return rc;
+                }
 		}
 	}
 	CDBG("%s: done\n", __func__);

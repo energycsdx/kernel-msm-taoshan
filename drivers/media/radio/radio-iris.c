@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved
+ * Copyright (c) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,6 +40,7 @@
 #include <asm/unaligned.h>
 
 static unsigned int rds_buf = 100;
+static unsigned char interrupt_event[128];
 module_param(rds_buf, uint, 0);
 MODULE_PARM_DESC(rds_buf, "RDS buffer entries: *100*");
 
@@ -2131,7 +2133,9 @@ static inline void hci_ev_radio_text(struct radio_hci_dev *hdev,
 	data[4] = 0;
 
 	memcpy(data+RDS_OFFSET, &skb->data[RDS_OFFSET], len);
-	data[len+RDS_OFFSET] = 0x00;
+
+	//data[len+RDS_OFFSET] = 0x00;
+	data[len+RDS_OFFSET-1] = 0x00;
 
 	iris_q_evt_data(radio, data, len+RDS_OFFSET, IRIS_BUF_RT_RDS);
 
@@ -2671,6 +2675,21 @@ static int iris_vidioc_g_ext_ctrls(struct file *file, void *priv,
 			return -EFAULT;
 		retval = hci_def_data_read(&default_data_rd, radio->fm_hdev);
 		break;
+
+	case V4L2_CID_PRIVATE_IRIS_READ_INTERRUPT_EVENT:
+	       {
+		   	int len=0;
+			retval=-1;
+			data = (ctrl->controls[0]).string;
+			len=(ctrl->controls[0]).size;
+			retval = copy_to_user(data, &interrupt_event[0], len);
+			if (retval > 0) {
+				FMDERR("Failed to copy %d bytes of data\n", retval);
+				return -EAGAIN;
+			}
+		}
+		break;
+
 	default:
 		retval = -EINVAL;
 	}
@@ -3494,9 +3513,11 @@ static int iris_vidioc_s_frequency(struct file *file, void *priv,
 	return retval;
 }
 
+
 static int iris_vidioc_dqbuf(struct file *file, void *priv,
 				struct v4l2_buffer *buffer)
 {
+#if (0)
 	struct iris_device  *radio = video_get_drvdata(video_devdata(file));
 	enum iris_buf_t buf_type = buffer->index;
 	struct kfifo *data_fifo;
@@ -3514,10 +3535,52 @@ static int iris_vidioc_dqbuf(struct file *file, void *priv,
 		FMDERR("invalid buffer type\n");
 		return -EINVAL;
 	}
+
 	buffer->bytesused = kfifo_out_locked(data_fifo, buf, len,
 					&radio->buf_lock[buf_type]);
 
 	return 0;
+#else
+	struct iris_device  *radio = video_get_drvdata(video_devdata(file));
+	enum iris_buf_t buf_type = buffer->index;
+	enum iris_buf_t buf_type_temp = buffer->index;
+	struct kfifo *data_fifo;
+	
+	unsigned char *buf = (unsigned char *)buffer->m.userptr;
+	unsigned int len = buffer->length;
+       unsigned int len_temp=sizeof(interrupt_event);	
+
+     if (buf_type == IRIS_BUF_EVENTS_CCI){
+	 //change to correct type
+	  buf_type=IRIS_BUF_EVENTS;
+     	}	 	
+	   
+	   
+	if (!access_ok(VERIFY_WRITE, buf, len))
+		return -EFAULT;
+	if ((buf_type < IRIS_BUF_MAX) && (buf_type >= 0)) {
+		data_fifo = &radio->data_buf[buf_type];
+		if (buf_type == IRIS_BUF_EVENTS)
+			if (wait_event_interruptible(radio->event_queue,
+				kfifo_len(data_fifo)) < 0)
+				return -EINTR;
+	} else {
+		FMDERR("invalid buffer type\n");
+		return -EINVAL;
+      }
+
+	if (buf_type_temp == IRIS_BUF_EVENTS_CCI){
+	   memset(&interrupt_event[0], 0, sizeof(interrupt_event));
+	    interrupt_event[0]=kfifo_out_locked(data_fifo, &interrupt_event[1], len_temp-1,
+					&radio->buf_lock[buf_type]);
+	}
+       else{
+	  buffer->bytesused = kfifo_out_locked(data_fifo, buf, len,
+					&radio->buf_lock[buf_type]);	   	
+       }
+
+	return 0;
+#endif
 }
 
 static int iris_vidioc_g_fmt_type_private(struct file *file, void *priv,

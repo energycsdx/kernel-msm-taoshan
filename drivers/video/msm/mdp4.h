@@ -939,4 +939,8 @@ int mdp4_overlay_mdp_pipe_req(struct mdp4_overlay_pipe *pipe,
 int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 			      struct mdp4_overlay_pipe *plist);
 void mdp4_overlay_mdp_perf_upd(struct msm_fb_data_type *mfd, int flag);
+//Taylor--B
+int read_mipi_state(void);
+void wrtie_mipi_state(int value);
+//Taylor--E
 #endif /* MDP_H */

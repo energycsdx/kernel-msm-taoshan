@@ -2,6 +2,7 @@
  *
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -124,6 +125,7 @@ struct msm_camera_sensor_flash_current_driver {
 enum msm_camera_ext_led_flash_id {
 	MAM_CAMERA_EXT_LED_FLASH_SC628A,
 	MAM_CAMERA_EXT_LED_FLASH_TPS61310,
+	MAM_CAMERA_EXT_LED_FLASH_LM3561, //2012/07/22
 };
 
 struct msm_camera_sensor_flash_external {
@@ -402,7 +404,10 @@ struct msm_panel_common_pdata {
 	void (*panel_config_gpio)(int);
 	int (*vga_switch)(int select_vga);
 	int *gpio_num;
+	int mdp_core_clk_rate;
 	u32 mdp_max_clk;
+	unsigned num_mdp_clk;
+	int *mdp_core_clk_table;
 #ifdef CONFIG_MSM_BUS_SCALING
 	struct msm_bus_scale_pdata *mdp_bus_scale_table;
 #endif

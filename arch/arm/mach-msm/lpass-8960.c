@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,6 +29,17 @@
 #include "smd_private.h"
 #include "ramdump.h"
 #include "sysmon.h"
+
+extern long system_flag;
+#ifdef CONFIG_CCI_KLOG
+extern long* powerpt;
+#endif
+
+
+#ifdef CONFIG_CCI_KLOG
+#include <linux/cciklog.h>
+#endif // #ifdef CONFIG_CCI_KLOG
+
 
 #define SCM_Q6_NMI_CMD                  0x1
 #define MODULE_NAME			"lpass_8960"
@@ -93,6 +105,14 @@ static void lpass_log_failure_reason(void)
 	char buffer[MAX_BUF_SIZE];
 	unsigned size;
 
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	set_fault_state(0x5, -1, "lpass");
+#endif // #if CCI_KLOG_CRASH_SIZE
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
+
 	reason = smem_get_entry(SMEM_SSR_REASON_LPASS0, &size);
 
 	if (!reason) {
@@ -120,6 +140,13 @@ static void lpass_fatal_fn(struct work_struct *work)
 	pr_err("%s %s: Watchdog bite received from Q6!\n", MODULE_NAME,
 		__func__);
 	lpass_log_failure_reason();
+
+	if((inactive == system_flag) || (normalreboot == system_flag) || (adloadmode == system_flag) ||(poweroff == system_flag))
+		system_flag = lpassfatal;
+#ifdef CONFIG_CCI_KLOG		
+	*powerpt = (POWERONOFFRECORD + system_flag);
+#endif	
+
 	panic(MODULE_NAME ": Resetting the SoC");
 }
 
@@ -135,6 +162,13 @@ static void lpass_smsm_state_cb(void *data, uint32_t old_state,
 			" new_state = 0x%x, old_state = 0x%x\n", __func__,
 			new_state, old_state);
 		lpass_log_failure_reason();
+
+	    if((inactive == system_flag) || (normalreboot == system_flag) || (adloadmode == system_flag) ||(poweroff == system_flag))
+		    system_flag = lpassfatal;
+#ifdef CONFIG_CCI_KLOG			
+	    *powerpt = (POWERONOFFRECORD + system_flag);
+#endif		
+
 		panic(MODULE_NAME ": Resetting the SoC");
 	}
 }

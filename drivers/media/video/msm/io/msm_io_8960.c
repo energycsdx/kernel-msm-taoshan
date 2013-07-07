@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -57,16 +58,20 @@ void msm_camio_bus_scale_cfg(struct msm_bus_scale_pdata *cam_bus_scale_table,
 		break;
 	case S_PREVIEW:
 		if (bus_perf_client) {
+//S JackBB 2012/12/3 [Q111M]
 			rc = msm_bus_scale_client_update_request(
-				bus_perf_client, 1);
+				bus_perf_client, 4);
+//E JackBB 2012/12/3 [Q111M]
 			CDBG("%s: S_PREVIEW rc = %d\n", __func__, rc);
 		} else
 			CDBG("%s: Bus Client NOT Registered!!!\n", __func__);
 		break;
 	case S_VIDEO:
 		if (bus_perf_client) {
+//S JackBB 2012/12/3 [Q111M]
 			rc = msm_bus_scale_client_update_request(
-				bus_perf_client, 2);
+				bus_perf_client, 4);
+//E JackBB 2012/12/3 [Q111M]
 			CDBG("%s: S_VIDEO rc = %d\n", __func__, rc);
 		} else
 			CDBG("%s: Bus Client NOT Registered!!!\n", __func__);

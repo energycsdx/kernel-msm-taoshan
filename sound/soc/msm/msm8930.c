@@ -1,4 +1,5 @@
 /* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +27,7 @@
 #include <mach/socinfo.h>
 #include "msm-pcm-routing.h"
 #include "../codecs/wcd9304.h"
+#include "../../../arch/arm/mach-msm/include/mach/gpio.h"  // AUD_MOD
 
 /* 8930 machine driver */
 
@@ -139,8 +141,17 @@ static void msm8960_ext_spk_power_amp_on(u32 spk)
 		if ((msm8930_ext_spk_pamp & SPK_AMP_POS) &&
 			(msm8930_ext_spk_pamp & SPK_AMP_NEG)) {
 
+			#if 0 // AUD_MOD QCT
 			if (machine_is_msm8930_mtp()
 				|| machine_is_msm8930_fluid()) {
+			#else
+			/*
+			* 8930 CDP does not have a 5V speaker boost,
+			* hence the GPIO enable for speaker boost is
+			* only required for platforms other than CDP
+			*/
+			if (!machine_is_msm8930_cdp()) {
+			#endif
 				pr_debug("%s: Configure Speaker Boost GPIO %u",
 						__func__, SPKR_BOOST_GPIO);
 				ret = gpio_request(SPKR_BOOST_GPIO,
@@ -175,8 +186,12 @@ static void msm8960_ext_spk_power_amp_off(u32 spk)
 	if (spk & (SPK_AMP_POS | SPK_AMP_NEG)) {
 		if (!msm8930_ext_spk_pamp)
 			return;
+		#if 0 // AUD_MOD QCT
 		if (machine_is_msm8930_mtp()
 			|| machine_is_msm8930_fluid()) {
+		#else
+		if (!machine_is_msm8930_cdp()) {
+		#endif
 			pr_debug("%s: Free speaker boost gpio %u\n",
 					__func__, SPKR_BOOST_GPIO);
 			gpio_direction_output(SPKR_BOOST_GPIO, 0);
@@ -311,12 +326,13 @@ static const struct snd_soc_dapm_route common_audio_map[] = {
 	{"MIC BIAS2 External", NULL, "Headset Mic"},
 
 	/* Microphone path */
-	{"AMIC1", NULL, "MIC BIAS2 External"},
-	{"MIC BIAS2 External", NULL, "ANCLeft Headset Mic"},
+// AUD_MOD start
+	{"AMIC1", NULL, "MIC BIAS1 External"},
+	{"MIC BIAS1 External", NULL, "ANCLeft Headset Mic"},
 
-	{"AMIC3", NULL, "MIC BIAS2 External"},
-	{"MIC BIAS2 External", NULL, "ANCRight Headset Mic"},
-
+	{"AMIC3", NULL, "MIC BIAS1 External"},
+	{"MIC BIAS1 External", NULL, "ANCRight Headset Mic"},
+// AUD_MOD end
 	{"HEADPHONE", NULL, "LDO_H"},
 
 	/**
@@ -514,7 +530,7 @@ static void *def_sitar_mbhc_cal(void)
 #undef S
 #define S(X, Y) ((SITAR_MBHC_CAL_PLUG_TYPE_PTR(sitar_cal)->X) = (Y))
 	S(v_no_mic, 30);
-	S(v_hs_max, 1650);
+	S(v_hs_max, 2400);  // AUD_MOD
 #undef S
 #define S(X, Y) ((SITAR_MBHC_CAL_BTN_DET_PTR(sitar_cal)->X) = (Y))
 	S(c[0], 62);
@@ -531,22 +547,26 @@ static void *def_sitar_mbhc_cal(void)
 	btn_cfg = SITAR_MBHC_CAL_BTN_DET_PTR(sitar_cal);
 	btn_low = sitar_mbhc_cal_btn_det_mp(btn_cfg, SITAR_BTN_DET_V_BTN_LOW);
 	btn_high = sitar_mbhc_cal_btn_det_mp(btn_cfg, SITAR_BTN_DET_V_BTN_HIGH);
-	btn_low[0] = -50;
-	btn_high[0] = 10;
-	btn_low[1] = 11;
-	btn_high[1] = 38;
-	btn_low[2] = 39;
-	btn_high[2] = 64;
-	btn_low[3] = 65;
-	btn_high[3] = 91;
-	btn_low[4] = 92;
-	btn_high[4] = 115;
-	btn_low[5] = 116;
-	btn_high[5] = 141;
-	btn_low[6] = 142;
-	btn_high[6] = 163;
-	btn_low[7] = 164;
-	btn_high[7] = 250;
+	
+// AUD_MOD start
+	btn_low[0] = -50;	 // 0;
+	btn_high[0] = 99;	 // 99;
+	btn_low[1] = 100;	 // 100;
+	btn_high[1] = 299;	// 199;
+	btn_low[2] = 300;	 // 280;
+	btn_high[2] = 599;	// 399;
+	btn_low[3] = 600;	 // 500;
+	btn_high[3] = 1049; 	   // 699;
+	btn_low[4] = 1050;
+	btn_high[4] = 1099;
+	btn_low[5] = 1100;
+	btn_high[5] = 1149;
+	btn_low[6] = 1150;
+	btn_high[6] = 1199;
+	btn_low[7] = 1200;
+	btn_high[7] = 1299;
+// AUD_MOD end
+	
 	n_ready = sitar_mbhc_cal_btn_det_mp(btn_cfg, SITAR_BTN_DET_N_READY);
 	n_ready[0] = 48;
 	n_ready[1] = 38;
@@ -640,7 +660,7 @@ static int msm8930_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_sync(dapm);
 
 	err = snd_soc_jack_new(codec, "Headset Jack",
-		(SND_JACK_HEADSET | SND_JACK_OC_HPHL | SND_JACK_OC_HPHR),
+		(SND_JACK_HEADSET | SND_JACK_OC_HPHL | SND_JACK_OC_HPHR | SND_JACK_UNSUPPORTED), // AUD_MOD
 		&hs_jack);
 	if (err) {
 		pr_err("failed to create new jack\n");
@@ -654,6 +674,19 @@ static int msm8930_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 	codec_clk = clk_get(cpu_dai->dev, "osr_clk");
+
+	// AUD_MOD start
+	if( board_type_with_hw_id() == EVT_BOARD_HW_ID )
+	{
+		mbhc_cfg.gpio_level_insert = 0;
+		printk("gpio_level_insert set to 0\n");
+	}
+	else
+	{
+		mbhc_cfg.gpio_level_insert = 1;
+		printk("gpio_level_insert set to 1\n");
+	}
+	// AUD_MOD end
 
 	mbhc_cfg.gpio = 37;
 	mbhc_cfg.gpio_irq = gpio_to_irq(mbhc_cfg.gpio);

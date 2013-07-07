@@ -2,6 +2,7 @@
  *  linux/kernel/panic.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  */
 
 /*
@@ -24,6 +25,23 @@
 #include <linux/nmi.h>
 #include <linux/dmi.h>
 
+#include <mach/subsystem_restart.h>
+#include <mach/msm_iomap.h>
+#include <linux/io.h>
+extern long system_flag;
+#ifdef CONFIG_CCI_KLOG
+extern long* powerpt;
+extern long* unknowflag;
+extern long* backupcrashflag;
+#endif
+
+
+#ifdef CONFIG_CCI_KLOG
+#include <linux/mm.h>
+#include <linux/irq.h>
+#include <linux/cciklog.h>
+#endif // #ifdef CONFIG_CCI_KLOG
+
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
 
@@ -35,7 +53,11 @@ static unsigned long tainted_mask;
 static int pause_on_oops;
 static int pause_on_oops_flag;
 static DEFINE_SPINLOCK(pause_on_oops_lock);
-
+extern void set_warmboot(void);
+extern void *restart_reason;
+#define CONFIG_WARMBOOT_CRASH       0xC0DEDEAD
+#define CONFIG_WARMBOOT_NONE        0x00000000
+#define CONFIG_WARMBOOT_NORMAL     	0x77665501
 #ifndef CONFIG_PANIC_TIMEOUT
 #define CONFIG_PANIC_TIMEOUT 0
 #endif
@@ -79,7 +101,22 @@ void panic(const char *fmt, ...)
 	va_list args;
 	long i, i_next = 0;
 	int state = 0;
+	__raw_writel(CONFIG_WARMBOOT_NONE, restart_reason);
+	if((inactive == system_flag) || (normalreboot == system_flag) || (adloadmode == system_flag) ||(poweroff == system_flag))
+		system_flag = kernelpanic;
+#ifdef CONFIG_CCI_KLOG		
+	*powerpt = (POWERONOFFRECORD + system_flag);
+	*unknowflag = 0;
+	*backupcrashflag = 0;
+#endif	
 
+		set_warmboot();
+#ifdef CCI_KLOG_ALLOW_FORCE_PANIC			
+		__raw_writel(CONFIG_WARMBOOT_CRASH, restart_reason);
+#else
+	__raw_writel(CONFIG_WARMBOOT_NORMAL, restart_reason);
+	*backupcrashflag = CONFIG_WARMBOOT_CRASH;
+#endif			
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
 	 * from deadlocking the first cpu that invokes the panic, since
@@ -101,12 +138,48 @@ void panic(const char *fmt, ...)
 	if (!spin_trylock(&panic_lock))
 		panic_smp_self_stop();
 
+
+#ifndef CONFIG_CCI_KLOG
 	console_verbose();
+#endif // #ifndef CONFIG_CCI_KLOG
+
 	bust_spinlocks(1);
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	set_fault_state(0x1, 0, buf);
+#endif // #if CCI_KLOG_CRASH_SIZE
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
+
+#ifdef CONFIG_CCI_KLOG
+	cklc_save_magic(KLOG_MAGIC_AARM_PANIC, KLOG_STATE_AARM_PANIC);
+	local_irq_disable();
+	if(!oops_in_progress)//not called from die
+	{
+		struct pt_regs *regs = get_irq_regs();//only available when in intrrupt
+//modules info
+		print_modules();
+//register info
+		if(regs)
+		{
+			show_regs(regs);
+		}
+//memory info
+		show_mem(SHOW_MEM_FILTER_NODES);
+#ifndef CONFIG_DEBUG_BUGVERBOSE
+//call-stack
+		dump_stack();
+#endif // #ifndef CONFIG_DEBUG_BUGVERBOSE
+//call-stacks of all threads/processes, it will output huge amount of logs
+//		show_state();
+	}
+#endif // #ifdef CONFIG_CCI_KLOG
+
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing
@@ -160,7 +233,11 @@ void panic(const char *fmt, ...)
 		 * shutting down.  But if there is a chance of
 		 * rebooting the system it will be rebooted.
 		 */
+
+#ifndef CONFIG_CCI_KLOG
 		emergency_restart();
+#endif // #ifdef CONFIG_CCI_KLOG
+
 	}
 #ifdef __sparc__
 	{
@@ -178,7 +255,18 @@ void panic(const char *fmt, ...)
 		disabled_wait(caller);
 	}
 #endif
+
+#ifdef CONFIG_CCI_KLOG
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	set_fault_state(-1, -1, "");//crash info finished, record important log only
+#endif // #if CCI_KLOG_CRASH_SIZE
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+	kernel_restart(NULL);
+#else // #ifdef CONFIG_CCI_KLOG
 	local_irq_enable();
+#endif // #ifdef CONFIG_CCI_KLOG
+
 	for (i = 0; ; i += PANIC_TIMER_STEP) {
 		touch_softlockup_watchdog();
 		if (i >= i_next) {
@@ -388,11 +476,30 @@ late_initcall(init_oops_id);
 
 void print_oops_end_marker(void)
 {
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	int fault_state = get_fault_state();
+#endif // #if CCI_KLOG_CRASH_SIZE
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
+
 	init_oops_id();
 
 	if (mach_panic_string)
 		printk(KERN_WARNING "Board Information: %s\n",
 		       mach_panic_string);
+
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	if(fault_state > 0 && (fault_state & 0x10) == 0)
+	{
+		printk(KERN_ALERT "---[ end trace %016llx ]---\n", (unsigned long long)oops_id);
+	}
+	else
+#endif // #if CCI_KLOG_CRASH_SIZE
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
 
 	printk(KERN_WARNING "---[ end trace %016llx ]---\n",
 		(unsigned long long)oops_id);
@@ -476,8 +583,17 @@ EXPORT_SYMBOL(warn_slowpath_null);
  */
 void __stack_chk_fail(void)
 {
+
+#define SUPPORT_T32_DEBUG
+#ifdef SUPPORT_T32_DEBUG
+	printk("stack-protector: Kernel stack is corrupted in: %p\n",
+		__builtin_return_address(0));
+	BUG_ON(1);
+#else // #ifdef SUPPORT_T32_DEBUG
 	panic("stack-protector: Kernel stack is corrupted in: %p\n",
 		__builtin_return_address(0));
+#endif // #ifdef SUPPORT_T32_DEBUG
+
 }
 EXPORT_SYMBOL(__stack_chk_fail);
 

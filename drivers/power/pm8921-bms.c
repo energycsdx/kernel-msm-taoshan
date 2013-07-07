@@ -1,5 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
- *
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -53,6 +53,27 @@
 
 #define TEMP_IAVG_STORAGE	0x105
 #define TEMP_IAVG_STORAGE_USE_MASK	0x0F
+
+
+#if defined(ORG_VER)
+#else
+#define CONFIG_PM8038_CHG_DEBUG 1
+#if(CONFIG_PM8038_CHG_DEBUG)
+    #define PrintLog_DEBUG(fmt, args...)    printk(KERN_INFO "CH(L)=> "pr_fmt(fmt), ##args)
+    #define PrintLog_PRDEBUG(fmt, args...)    printk(KERN_INFO "CH(L)=> "pr_fmt(fmt), ##args)
+//    #define PrintLog_DEBUG(fmt, args...)    pr_debug("CH(L)=> "pr_fmt(fmt), ##args)
+#else
+    #define PrintLog_DEBUG(fmt, args...)
+#endif
+
+#define CONFIG_PM8038_CHG_INFO 1
+#if(CONFIG_PM8038_CHG_INFO)
+    #define PrintLog_INFO(fmt, args...)    printk(KERN_INFO "CH(L)=> "pr_fmt(fmt), ##args)
+#else
+    #define PrintLog_INFO(fmt, args...)
+#endif
+#endif
+
 
 enum pmic_bms_interrupts {
 	PM8921_BMS_SBI_WRITE_OK,
@@ -175,6 +196,20 @@ static int calculated_soc = -EINVAL;
 static int last_soc = -EINVAL;
 static int last_real_fcc_mah = -EINVAL;
 static int last_real_fcc_batt_temp = -EINVAL;
+
+
+#if defined(ORG_VER)
+#else
+static char FuelGauge_drv_FW_version[] = "0002";
+
+char * get_FuelGauge_drv_version(void)
+{
+//	return &FuelGauge_drv_FW_version[0];
+	return FuelGauge_drv_FW_version;
+}
+// EXPORT_SYMBOL_GPL(get_FuelGauge_drv_version);
+#endif
+
 
 static int bms_ops_set(const char *val, const struct kernel_param *kp)
 {
@@ -2818,11 +2853,19 @@ palladium:
 		chip->fcc_temp_lut = palladium_1500_data.fcc_temp_lut;
 		chip->fcc_sf_lut = palladium_1500_data.fcc_sf_lut;
 		chip->pc_temp_ocv_lut = palladium_1500_data.pc_temp_ocv_lut;
+		#ifdef ORG_VER//LO
 		chip->pc_sf_lut = palladium_1500_data.pc_sf_lut;
+		#else
+		chip->pc_sf_lut = NULL;
+		#endif
 		chip->rbatt_sf_lut = palladium_1500_data.rbatt_sf_lut;
 		chip->default_rbatt_mohm
 				= palladium_1500_data.default_rbatt_mohm;
+		#ifdef ORG_VER//LO
 		chip->delta_rbatt_mohm = palladium_1500_data.delta_rbatt_mohm;
+		#else
+		chip->delta_rbatt_mohm = 0;
+		#endif
 		return 0;
 desay:
 		chip->fcc = desay_5200_data.fcc;

@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -705,7 +706,9 @@ static struct msm_sensor_exp_gain_info_t ov2720_exp_gain_info = {
 };
 
 static int32_t ov2720_write_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
-		uint16_t gain, uint32_t line)
+//S JackBB 2012/12/3 [Q111M]
+		uint16_t gain, uint32_t line, int32_t luma_avg, uint16_t fgain)
+//E JackBB 2012/12/3 [Q111M]
 {
 	uint32_t fl_lines, offset;
 	uint8_t int_time[3];

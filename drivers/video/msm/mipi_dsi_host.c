@@ -1,5 +1,6 @@
 
 /* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -54,6 +55,34 @@ static struct mutex clk_mutex;
 
 static struct list_head pre_kickoff_list;
 static struct list_head post_kickoff_list;
+//Taylor-->
+#ifndef ORIGINAL_VERSION
+//#define DSI_HOST_DEBUG //Taylor--debug
+static DECLARE_WAIT_QUEUE_HEAD(mipi_event_wait);
+int mipi_event_wait_int = 0;
+/*
+0: for init value
+1: for checking value
+2. for fail
+3. for success
+*/
+int wait_mipi_dma = 0;//init value
+EXPORT_SYMBOL(wait_mipi_dma);
+extern int display_id; //Taylor
+int mipi_timeout =0;//Taylor
+
+int read_mipi_state(void)
+{
+	return mipi_timeout;
+}
+
+void wrtie_mipi_state(int value)
+{
+	mipi_timeout = value;
+	return;
+}
+#endif // #ifndef ORIGINAL_VERSION
+//Taylor--<--
 
 enum {
 	STAT_DSI_START,
@@ -1098,6 +1127,15 @@ void mipi_dsi_set_tear_off(struct msm_fb_data_type *mfd)
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 
+	//Taylor--B
+	if(display_id){
+		if(read_mipi_state()){
+			pr_err("%s:MIPI timeout don't send cmd\n",__func__);
+			return;
+		}	
+	}
+	//Taylor--E
+
 	mipi_dsi_cmdlist_put(&cmdreq);
 }
 
@@ -1357,7 +1395,17 @@ int mipi_dsi_cmds_rx_new(struct dsi_buf *tp, struct dsi_buf *rp,
 	mipi_dsi_cmd_dma_add(tp, cmds);
 
 	/* transmit read comamnd to client */
+	//Taylor--B
+	if(display_id)
+		mipi_set_tx_power_mode(0);
+	//Taylor--E
+	
 	mipi_dsi_cmd_dma_tx(tp);
+
+	//Taylor--B
+	if(display_id)
+		mipi_set_tx_power_mode(1);
+	//Taylor--E
 
 	mipi_dsi_disable_irq(DSI_CMD_TERM);
 	/*
@@ -1453,7 +1501,34 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	wmb();
 	spin_unlock_irqrestore(&dsi_mdp_lock, flags);
 
+//Taylor--MIPI
+#ifndef ORIGINAL_VERSION
+	if(( wait_mipi_dma == 0 )||( wait_mipi_dma == 3 ))
+	{
+		if( wait_mipi_dma == 0 )
+		{
+			wait_mipi_dma = 1;//checking value
+			printk("[MIPI]%s wait_mipi_dma=%d\n", __func__, wait_mipi_dma);
+		}
+		//B: CH MIPI Timeout detect
+		if (!display_id){
+			if (wait_event_timeout(mipi_event_wait, mipi_event_wait_int, HZ) == 0){
+				printk(KERN_ERR "timeout waiting for MIPI\n");
+			}
+		}
+		else{
+			if (wait_event_timeout(mipi_event_wait, mipi_event_wait_int, HZ/2) == 0){
+				mipi_timeout =1 ;
+				printk(KERN_ERR "timeout waiting for MIPI\n");
+			}
+		}
+		mipi_event_wait_int = 0;
+		//E: CH MIPI Timeout detect
+	}
+#else // #ifndef ORIGINAL_VERSION
 	wait_for_completion(&dsi_dma_comp);
+#endif // #ifndef ORIGINAL_VERSION
+//Taylor--MIPI
 
 	dma_unmap_single(&dsi_dev, tp->dmap, tp->len, DMA_TO_DEVICE);
 	tp->dmap = 0;
@@ -1516,7 +1591,20 @@ void mipi_dsi_cmd_mdp_busy(void)
 		/* wait until DMA finishes the current job */
 		pr_debug("%s: pending pid=%d\n",
 				__func__, current->pid);
+	  //Taylor--B
+	  if(!display_id)
 		wait_for_completion(&dsi_mdp_comp);
+	  else{
+		int ret;
+		ret = wait_for_completion_interruptible_timeout(&dsi_mdp_comp,
+                                msecs_to_jiffies(500));
+                if(ret <= 0){
+                	pr_err("%s : ret<=0\n",__func__);
+                        complete(&dsi_mdp_comp);;
+                }
+	  }
+	  //Taylor--E
+
 	}
 	pr_debug("%s: done pid=%d\n",
 				__func__, current->pid);
@@ -1764,7 +1852,18 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 	if (isr & DSI_INTR_CMD_DMA_DONE) {
 		mipi_dsi_mdp_stat_inc(STAT_DSI_CMD);
 		spin_lock(&dsi_mdp_lock);
-		complete(&dsi_dma_comp);
+		//Taylor--MIPI
+#ifndef ORIGINAL_VERSION
+		mipi_event_wait_int = 1;
+		wake_up(&mipi_event_wait);
+#endif // #ifndef ORIGINAL_VERSION
+		//Taylor--MIPI
+//Taylor--MIPI
+#ifndef ORIGINAL_VERSION
+		wait_mipi_dma = 3;//sucess value
+#endif // #ifndef ORIGINAL_VERSION
+//Taylor--MIPI
+		//complete(&dsi_dma_comp);
 		dsi_ctrl_lock = FALSE;
 		mipi_dsi_disable_irq_nosync(DSI_CMD_TERM);
 		spin_unlock(&dsi_mdp_lock);

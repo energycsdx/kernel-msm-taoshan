@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (c) 2011-2012 Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012 Sony Mobile Communications AB.
  *
  * This file is based on include/net/bluetooth/hci_core.h
  *
@@ -605,6 +606,7 @@ enum v4l2_cid_private_iris_t {
 	V4L2_CID_PRIVATE_IRIS_READ_DEFAULT = 0x00980928,
 	V4L2_CID_PRIVATE_IRIS_WRITE_DEFAULT,
 	V4L2_CID_PRIVATE_IRIS_SET_CALIBRATION,
+	V4L2_CID_PRIVATE_IRIS_READ_INTERRUPT_EVENT= 0x0098092E, 
 };
 
 
@@ -673,6 +675,7 @@ enum iris_buf_t {
 	IRIS_BUF_RDS_CNTRS,
 	IRIS_BUF_RD_DEFAULT,
 	IRIS_BUF_CAL_DATA,
+	IRIS_BUF_EVENTS_CCI,
 	IRIS_BUF_MAX
 };
 

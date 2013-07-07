@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
- *
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -15,7 +15,34 @@
 #include <linux/err.h>
 #include <linux/module.h>
 #include <linux/mfd/pm8xxx/pm8xxx-adc.h>
+
+#if defined(ORG_VER)
+#else
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+#endif
+
 #define KELVINMIL_DEGMIL	273160
+
+
+#if defined(ORG_VER)
+#else
+#define CONFIG_PM8038_CHG_DEBUG 0
+#if(CONFIG_PM8038_CHG_DEBUG)
+    #define PrintLog_DEBUG(fmt, args...)    printk(KERN_INFO "CH(L)=> "pr_fmt(fmt), ##args)
+//    #define PrintLog_DEBUG(fmt, args...)    pr_debug("CH(L)=> "pr_fmt(fmt), ##args)
+#else
+    #define PrintLog_DEBUG(fmt, args...)
+#endif
+
+#define CONFIG_PM8038_CHG_INFO 1
+#if(CONFIG_PM8038_CHG_INFO)
+    #define PrintLog_INFO(fmt, args...)    printk(KERN_INFO "CH(L)=> "pr_fmt(fmt), ##args)
+#else
+    #define PrintLog_INFO(fmt, args...)
+#endif
+#endif
+
 
 /* Units for temperature below (on x axis) is in 0.1DegC as
    required by the battery driver. Note the resolution used
@@ -25,6 +52,7 @@
    and provided to the battery driver in the units desired for
    their framework which is 0.1DegC. True resolution of 0.1DegC
    will result in the below table size to increase by 10 times */
+#ifdef ORG_VER 
 static const struct pm8xxx_adc_map_pt adcmap_btm_threshold[] = {
 	{-300,	1642},
 	{-200,	1544},
@@ -110,6 +138,46 @@ static const struct pm8xxx_adc_map_pt adcmap_btm_threshold[] = {
 	{780,	208},
 	{790,	203}
 };
+#else
+static struct pm8xxx_adc_map_pt adcmap_btm_threshold[] = {
+	{-200,   1332},
+	{0,    1216},
+	{50,    1171},
+	{100,    1125},
+	{150,   1075},
+	{200,   1022},
+	{250,   964},
+	{300,   912},
+	{350,   863},
+	{400,   812},
+	{450,   766},
+	{500,   725},
+	{550,   688},
+	{600,   656},
+	{650,   622},
+	{700,   600},
+	{1000,   505}
+};
+static struct pm8xxx_adc_map_pt adcmap_btm_range[] = { 
+	{1280,   1360},	//-20degC
+	{1165,    1245},	//0degC
+	{1120,    1210},	//5degC
+	{1070,    1165},	//10degC
+	{1015,   1115},	//15degC
+	{965,   1065},	//20degC
+	{910,   1010},	//25degC
+	{860,   955},		//30degC
+	{810,   905},		//35degC
+	{760,   855},		//40degC
+	{720,   805},		//45degC
+	{680,   760},		//50degC
+	{640,   720},		//55degC
+	{615,   685},		//60degC
+	{590,   655},		//65degC
+	{560,   630},		//70degC
+	{470,   530}		//100degC
+};
+#endif 
 
 static const struct pm8xxx_adc_map_pt adcmap_pa_therm[] = {
 	{1731,	-30},
@@ -611,6 +679,103 @@ static int64_t pm8xxx_adc_scale_ratiometric_calib(int32_t adc_code,
 	return adc_voltage;
 }
 
+
+#if defined(ORG_VER)
+#else
+#define  NV_calibrated_btm_count 10
+bool btm_calibrate(const char *buf, size_t count)
+{
+	struct pm8xxx_adc_map_pt btm_calibrated_threshold[NV_calibrated_btm_count];
+	int btm_calibrated_index[NV_calibrated_btm_count];
+	int temp = 0, last_btm_calibrated_index = -1;
+	int i = 0, j = 0;
+	int Tbat_mv_degc = 0;
+
+	for (i=0; i<NV_calibrated_btm_count; i++)
+	{
+		btm_calibrated_threshold[i].x = btm_calibrated_threshold[i].y = 0;
+		btm_calibrated_index[i] = -1;
+	}
+	memcpy((void *)btm_calibrated_threshold, (const void *)buf, count);
+
+	for (i=0; i<NV_calibrated_btm_count; i++)
+	{
+		PrintLog_INFO("btm_calibrated_threshold[%d], Tbat:%d, Vtbat_mv:%d\n", i, btm_calibrated_threshold[i].x, btm_calibrated_threshold[i].y);
+	}
+	PrintLog_INFO("Before calibrating adcmap_btm_threshold\n");
+	for (i=0; i<ARRAY_SIZE(adcmap_btm_threshold); i++)
+	{
+		PrintLog_INFO("btm_threshold[%d], Tbat:%d, Vtbat_mv:%d\n", i, adcmap_btm_threshold[i].x, adcmap_btm_threshold[i].y);
+	}
+	for (i=0; i<NV_calibrated_btm_count; i++)
+	{
+		if(btm_calibrated_threshold[i].y)
+		{
+			for (j=0; j<ARRAY_SIZE(adcmap_btm_threshold); j++)
+			{
+				if(btm_calibrated_threshold[i].x == adcmap_btm_threshold[j].x)
+				{
+					if ((btm_calibrated_threshold[i].y >= adcmap_btm_range[j].x) && (btm_calibrated_threshold[i].y <= adcmap_btm_range[j].y))
+					{
+						adcmap_btm_threshold[j].y = btm_calibrated_threshold[i].y;
+						btm_calibrated_index[i] = j;
+						break;
+					}
+				}
+			}
+		}
+	}
+//	for (i=0; i<NV_calibrated_btm_count; i++)
+//	{
+//		PrintLog_DEBUG("btm_calibrated_index[%d]=%d\n", i, btm_calibrated_index[i]);
+//	}
+	for (i=0; i<NV_calibrated_btm_count; i++)
+	{
+		for (j=i; j<NV_calibrated_btm_count; j++)
+		{
+			if(btm_calibrated_index[i] > btm_calibrated_index[j])
+			{
+				temp = btm_calibrated_index[i];
+				btm_calibrated_index[i] = btm_calibrated_index[j];
+				btm_calibrated_index[j] = temp;
+			}
+		}
+	}
+//	for (i=0; i<NV_calibrated_btm_count; i++)
+//	{
+//		PrintLog_DEBUG("btm_calibrated_index[%d]=%d\n", i, btm_calibrated_index[i]);
+//	}
+	for (i=0; i<NV_calibrated_btm_count; i++)
+	{
+		if(btm_calibrated_index[i] != -1)
+		{
+			if(last_btm_calibrated_index != -1)
+			{
+				Tbat_mv_degc = (adcmap_btm_threshold[btm_calibrated_index[i]].y - adcmap_btm_threshold[btm_calibrated_index[last_btm_calibrated_index]].y)/((adcmap_btm_threshold[btm_calibrated_index[i]].x - adcmap_btm_threshold[btm_calibrated_index[last_btm_calibrated_index]].x)/10);
+				for (j=1; j<(btm_calibrated_index[i]-btm_calibrated_index[last_btm_calibrated_index]); j++)
+				{
+					temp = adcmap_btm_threshold[btm_calibrated_index[last_btm_calibrated_index]].y + Tbat_mv_degc * ((adcmap_btm_threshold[btm_calibrated_index[last_btm_calibrated_index]+j].x - adcmap_btm_threshold[btm_calibrated_index[last_btm_calibrated_index]].x)/10);
+					if (temp > adcmap_btm_range[btm_calibrated_index[last_btm_calibrated_index]+j].y)
+						temp = adcmap_btm_range[btm_calibrated_index[last_btm_calibrated_index]+j].y;
+					else if(temp < adcmap_btm_range[btm_calibrated_index[last_btm_calibrated_index]+j].x)
+						temp = adcmap_btm_range[btm_calibrated_index[last_btm_calibrated_index]+j].x;
+					adcmap_btm_threshold[btm_calibrated_index[last_btm_calibrated_index]+j].y = temp;
+				}
+			}
+			last_btm_calibrated_index = i;
+		}
+	}
+	PrintLog_INFO("After calibrating adcmap_btm_threshold\n");
+	for (i=0; i<ARRAY_SIZE(adcmap_btm_threshold); i++)
+	{
+		PrintLog_INFO("btm_threshold[%d], Tbat:%d, Vtbat_mv:%d\n", i, adcmap_btm_threshold[i].x, adcmap_btm_threshold[i].y);
+	}
+
+	return true;
+}
+#endif
+
+
 int32_t pm8xxx_adc_scale_batt_therm(int32_t adc_code,
 		const struct pm8xxx_adc_properties *adc_properties,
 		const struct pm8xxx_adc_chan_properties *chan_properties,
@@ -620,6 +785,13 @@ int32_t pm8xxx_adc_scale_batt_therm(int32_t adc_code,
 
 	bat_voltage = pm8xxx_adc_scale_ratiometric_calib(adc_code,
 			adc_properties, chan_properties);
+
+
+#if defined(ORG_VER)
+#else
+	adc_chan_result->measurement = bat_voltage;
+#endif
+
 
 	return pm8xxx_adc_map_batt_therm(
 			adcmap_btm_threshold,

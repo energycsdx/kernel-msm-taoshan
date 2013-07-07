@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,6 +36,18 @@
 #include <mach/subsystem_restart.h>
 
 #include "smd_private.h"
+
+long system_flag = inactive;
+#ifdef CONFIG_CCI_KLOG
+extern long* powerpt;
+#endif
+
+
+
+#ifdef CONFIG_CCI_KLOG
+#include <linux/cciklog.h>
+#endif // #ifdef CONFIG_CCI_KLOG
+
 
 struct subsys_soc_restart_order {
 	const char * const *subsystem_list;
@@ -421,6 +434,11 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 	pr_debug("[%p]: Released powerup lock!\n", current);
 
+	system_flag = inactive;
+#ifdef CONFIG_CCI_KLOG	
+	*powerpt = POWERONOFFRECORD;
+#endif	
+
 out:
 	wake_unlock(&r_work->ssr_wake_lock);
 	wake_lock_destroy(&r_work->ssr_wake_lock);
@@ -477,6 +495,35 @@ int subsystem_restart(const char *subsys_name)
 		pr_warn("Unregistered subsystem %s!\n", subsys_name);
 		return -EINVAL;
 	}
+
+	if((inactive == system_flag) || (normalreboot == system_flag) || (adloadmode == system_flag) ||(poweroff == system_flag))
+	{
+        if(!strcmp(subsys->name,"gss"))
+	        system_flag = gssfatal;
+        else if(!strcmp(subsys->name,"modem"))
+	        system_flag = modemfatal;
+        else if(!strcmp(subsys->name,"lpass"))
+	        system_flag = lpassfatal;
+        else if(!strcmp(subsys->name,"external-modem"))
+	        system_flag = exmodemfatal;
+        else if(!strcmp(subsys->name,"dsps"))
+	        system_flag = dspsfatal;
+        else if(!strcmp(subsys->name,"riva"))
+	        system_flag = rivafatal;
+#ifdef CONFIG_CCI_KLOG			
+		*powerpt = (POWERONOFFRECORD + system_flag);
+#endif		
+	}
+
+
+#ifdef CONFIG_CCI_KLOG
+//modem fatal error
+#if CCI_KLOG_CRASH_SIZE
+	set_fault_state(0x5, restart_level, subsys_name);
+#endif // #if CCI_KLOG_CRASH_SIZE
+	cklc_save_magic(KLOG_MAGIC_MARM_FATAL, KLOG_STATE_MARM_FATAL);
+#endif // #ifdef CONFIG_CCI_KLOG
+
 
 	switch (restart_level) {
 

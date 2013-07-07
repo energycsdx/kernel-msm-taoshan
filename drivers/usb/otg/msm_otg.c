@@ -1063,7 +1063,10 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 	struct usb_gadget *g = motg->phy.otg->gadget;
 
 	if (g && g->is_a_peripheral)
+        {
+                dev_info(motg->phy.dev, "g && g->is_a_peripheral\n");
 		return;
+        }
 
 	if ((motg->chg_type == USB_ACA_DOCK_CHARGER ||
 		motg->chg_type == USB_ACA_A_CHARGER ||

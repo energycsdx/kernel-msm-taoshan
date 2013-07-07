@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,10 +28,20 @@
 #include "smd_private.h"
 #include "ramdump.h"
 
+
+#ifdef CONFIG_CCI_KLOG
+#include <linux/cciklog.h>
+#endif // #ifdef CONFIG_CCI_KLOG
+
+
 #define MODULE_NAME			"wcnss_8960"
 #define MAX_BUF_SIZE			0x51
 
 
+extern long system_flag;
+#ifdef CONFIG_CCI_KLOG
+extern long* powerpt;
+#endif
 
 static struct delayed_work cancel_vote_work;
 static void *riva_ramdump_dev;
@@ -46,6 +57,14 @@ static void smsm_state_cb_hdlr(void *data, uint32_t old_state,
 	unsigned smem_reset_size;
 	unsigned size;
 
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	set_fault_state(0x5, -1, "riva");
+#endif // #if CCI_KLOG_CRASH_SIZE
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
+
 	riva_crash = true;
 
 	pr_err("%s: smsm state changed\n", MODULE_NAME);
@@ -60,7 +79,15 @@ static void smsm_state_cb_hdlr(void *data, uint32_t old_state,
 	}
 
 	if (!enable_riva_ssr)
+
+	{
+	    if((inactive == system_flag) || (normalreboot == system_flag) || (adloadmode == system_flag) ||(poweroff == system_flag))
+		    system_flag = rivafatal;
+#ifdef CONFIG_CCI_KLOG			
+	    *powerpt = (POWERONOFFRECORD + system_flag);
+#endif		
 		panic(MODULE_NAME ": SMSM reset request received from Riva");
+	}
 
 	smem_reset_reason = smem_get_entry(SMEM_SSR_REASON_WCNSS0,
 			&smem_reset_size);
@@ -97,7 +124,15 @@ static irqreturn_t riva_wdog_bite_irq_hdlr(int irq, void *dev_id)
 	}
 
 	if (!enable_riva_ssr)
+
+	{
+	    if((inactive == system_flag) || (normalreboot == system_flag) || (adloadmode == system_flag) ||(poweroff == system_flag))
+		    system_flag = rivafatal;
+#ifdef CONFIG_CCI_KLOG			
+	    *powerpt = (POWERONOFFRECORD + system_flag);
+#endif		
 		panic(MODULE_NAME ": Watchdog bite received from Riva");
+	}
 
 	ss_restart_inprogress = true;
 	subsystem_restart("riva");

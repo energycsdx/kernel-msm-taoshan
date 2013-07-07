@@ -147,6 +147,12 @@ static void msm_mpm_set(bool wakeset)
 
 		reg = MSM_MPM_REQUEST_REG_CLEAR;
 		msm_mpm_write(reg, i, 0xffffffff);
+		/* print debug about gpio 69 which is the 13th bit for interrupt on mpm */
+	 if (irqs == msm_mpm_wake_irq && i == 1) {
+		printk(KERN_ERR "QCT %s 0x%x\n", __func__, irqs[i]);
+		printk(KERN_ERR "QCT %s 0x%x\n", __func__, msm_mpm_detect_ctl[i]);
+		printk(KERN_ERR "QCT %s 0x%x\n", __func__, msm_mpm_polarity[i]);
+		} 
 	}
 
 	/* Ensure that the set operation is complete before sending the
@@ -269,8 +275,11 @@ static int msm_mpm_set_irq_type_exclusive(
 			msm_mpm_detect_ctl[index] |= mask;
 		else
 			msm_mpm_detect_ctl[index] &= ~mask;
-
-		if (flow_type & (IRQ_TYPE_EDGE_RISING | IRQ_TYPE_LEVEL_HIGH))
+		//1227 - for Camera key.
+		if(index == 1 &&(irq ==356 || irq ==357)){		
+			msm_mpm_polarity[1] = msm_mpm_polarity[1] & (~(1 << 13));
+			printk(KERN_ERR "[%s]  msm_mpm_polarity[1] = 0x%x \n", __func__, msm_mpm_polarity[index]);
+		}else if (flow_type & (IRQ_TYPE_EDGE_RISING | IRQ_TYPE_LEVEL_HIGH))
 			msm_mpm_polarity[index] |= mask;
 		else
 			msm_mpm_polarity[index] &= ~mask;

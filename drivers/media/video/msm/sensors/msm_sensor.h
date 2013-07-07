@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -82,12 +83,17 @@ struct msm_sensor_reg_t {
 	uint8_t group_hold_on_conf_size;
 	struct msm_camera_i2c_reg_conf *group_hold_off_conf;
 	uint8_t group_hold_off_conf_size;
+        //B 2012/11/06
+        struct msm_camera_i2c_reg_conf *flash_settings;
+        uint8_t flash_settings_size;
+        //E 2012/11/06
 	struct msm_camera_i2c_conf_array *init_settings;
 	uint8_t init_size;
 	struct msm_camera_i2c_conf_array *mode_settings;
 	struct msm_camera_i2c_conf_array *no_effect_settings;
 	struct msm_sensor_output_info_t *output_settings;
 	uint8_t num_conf;
+    struct msm_camera_i2c_conf_array *half_fps_settings;//2013/01/28
 };
 
 struct v4l2_subdev_info {
@@ -117,10 +123,17 @@ struct msm_sensor_fn_t {
 
 	int32_t (*sensor_set_fps) (struct msm_sensor_ctrl_t *,
 			struct fps_cfg *);
+//S JackBB 2012/12/3 [Q111M]
 	int32_t (*sensor_write_exp_gain) (struct msm_sensor_ctrl_t *,
-			uint16_t, uint32_t);
+			uint16_t, uint32_t, int32_t, uint16_t);
 	int32_t (*sensor_write_snapshot_exp_gain) (struct msm_sensor_ctrl_t *,
-			uint16_t, uint32_t);
+			uint16_t, uint32_t, int32_t, uint16_t);
+//E JackBB 2012/12/3 [Q111M]
+
+/*S:[bug856] WB Setting for HDR video feature , Jim Lai 20120925 */
+	int32_t (*sensor_write_wb_gain) (struct msm_sensor_ctrl_t *,
+			uint16_t, uint16_t, uint16_t);
+/*E: Jim Lai 20120925 */
 	int32_t (*sensor_setting) (struct msm_sensor_ctrl_t *,
 			int update_type, int rt);
 	int32_t (*sensor_csi_setting) (struct msm_sensor_ctrl_t *,
@@ -131,6 +144,10 @@ struct msm_sensor_fn_t {
 		int, struct sensor_init_cfg *);
 	int32_t (*sensor_get_output_info) (struct msm_sensor_ctrl_t *,
 		struct sensor_output_info_t *);
+/*S: Jim Lai 20121019 */
+	int32_t (*sensor_get_stats_data) (struct msm_sensor_ctrl_t *,
+		struct stats_data_t *);
+/*E: Jim Lai 20121019 */
 	int (*sensor_config) (struct msm_sensor_ctrl_t *, void __user *);
 	int (*sensor_power_down)
 		(struct msm_sensor_ctrl_t *);
@@ -140,6 +157,15 @@ struct msm_sensor_fn_t {
 		(struct msm_sensor_ctrl_t *s_ctrl, uint16_t res);
 	int32_t (*sensor_get_csi_params)(struct msm_sensor_ctrl_t *,
 		struct csi_lane_params_t *);
+/*S JackBB 2012/10/24 */
+    int32_t (*sensor_write_atr_control)(struct msm_sensor_ctrl_t *s_ctrl,
+        uint16_t controlvar);
+/*E JackBB 2012/10/24  */
+
+//S JackBB 2012/12/3 [Q111M]
+       int32_t (*sensor_hdr_update)(struct msm_sensor_ctrl_t *,
+               struct sensor_hdr_update_parm_t *);
+//E JackBB 2012/12/3 [Q111M]
 };
 
 struct msm_sensor_csi_info {
@@ -196,9 +222,15 @@ void msm_sensor_group_hold_off(struct msm_sensor_ctrl_t *s_ctrl);
 int32_t msm_sensor_set_fps(struct msm_sensor_ctrl_t *s_ctrl,
 			struct fps_cfg   *fps);
 int32_t msm_sensor_write_exp_gain1(struct msm_sensor_ctrl_t *s_ctrl,
-		uint16_t gain, uint32_t line);
+//S JackBB 2012/12/3 [Q111M]
+    uint16_t, uint32_t, int32_t, uint16_t);
+//E JackBB 2012/12/3 [Q111M]
 int32_t msm_sensor_write_exp_gain2(struct msm_sensor_ctrl_t *s_ctrl,
-		uint16_t gain, uint32_t line);
+//S JackBB 2012/12/3 [Q111M]
+    uint16_t, uint32_t, int32_t, uint16_t);
+int32_t msm_sensor_write_exp_gain3(struct msm_sensor_ctrl_t *s_ctrl,
+               uint16_t, uint32_t, int32_t, uint16_t);
+//E JackBB 2012/12/3 [Q111M]
 int32_t msm_sensor_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl,
 	int mode, int res);
 int32_t msm_sensor_mode_init(struct msm_sensor_ctrl_t *s_ctrl,
@@ -253,7 +285,11 @@ long msm_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 
 int32_t msm_sensor_get_csi_params(struct msm_sensor_ctrl_t *s_ctrl,
 		struct csi_lane_params_t *sensor_output_info);
-
+//B 2012/08/27
+int32_t msm_sensor_enable_i2c_mux(struct msm_camera_i2c_conf *i2c_conf);
+int32_t msm_sensor_disable_i2c_mux(struct msm_camera_i2c_conf *i2c_conf);
+//E 2012/08/27
+void msm_sensor_set_flash(int on);//2012/11/06
 struct msm_sensor_ctrl_t *get_sctrl(struct v4l2_subdev *sd);
 
 #define VIDIOC_MSM_SENSOR_CFG \

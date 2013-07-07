@@ -1046,7 +1046,9 @@ static int vfe32_start(struct msm_cam_media_controller *pmctl)
 	}
 
 	if (vfe32_ctrl->operation_mode & VFE_OUTPUTS_RDI0)
-		msm_camera_io_w(1, vfe32_ctrl->vfebase +
+//S JackBB 2012/12/3 [Q111M]
+		msm_camera_io_w(3, vfe32_ctrl->vfebase +
+//E JackBB 2012/12/3 [Q111M]
 		vfe32_AXI_WM_CFG[vfe32_ctrl->outpath.out2.ch0]);
 	if (vfe32_ctrl->operation_mode & VFE_OUTPUTS_RDI1)
 		msm_camera_io_w(1, vfe32_ctrl->vfebase +

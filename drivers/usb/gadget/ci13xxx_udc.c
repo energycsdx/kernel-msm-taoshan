@@ -2175,9 +2175,14 @@ __acquires(udc->lock)
 	if (udc->transceiver)
 		usb_phy_set_power(udc->transceiver, 0);
 
-	retval = _gadget_stop_activity(&udc->gadget);
-	if (retval)
-		goto done;
+	// Mike, for WHQL-MSC workaround.
+	if (udc->gadget.disable_disconnect) {
+	}
+	else {
+		retval = _gadget_stop_activity(&udc->gadget);
+		if (retval)
+			goto done;
+	}
 
 	retval = hw_usb_reset();
 	if (retval)

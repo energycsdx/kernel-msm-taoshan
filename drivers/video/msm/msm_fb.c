@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2007 Google Incorporated
  * Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -48,11 +49,17 @@
 #include "tvenc.h"
 #include "mdp.h"
 #include "mdp4.h"
-
+#include "mipi_dsi.h" //Taylor--20121018
+#include <asm/io.h>
+#include <mach/msm_iomap.h>
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_NUM	3
 #endif
+#ifdef CONFIG_CCI_KLOG
+static unsigned int *unknownreboot= (void*)MSM_KLOG_BASE + 0x3FFFF0;
+#endif
 
+extern int display_id; //Taylor
 static unsigned char *fbram;
 static unsigned char *fbram_phys;
 static int fbram_size;
@@ -809,6 +816,7 @@ static void msmfb_early_resume(struct early_suspend *h)
 
 static int unset_bl_level, bl_updated;
 static int bl_level_old;
+int cci_fb_UpdateDone = 0;//Taylor--20121105
 static int mdp_bl_scale_config(struct msm_fb_data_type *mfd,
 						struct mdp_bl_scale_data *data)
 {
@@ -1132,6 +1140,8 @@ static __u32 msm_fb_line_length(__u32 fb_index, __u32 xres, int bpp)
 		return xres * bpp;
 }
 
+struct fb_var_screeninfo *var_backup; //Taylor
+
 static int msm_fb_register(struct msm_fb_data_type *mfd)
 {
 	int ret = -ENODEV;
@@ -1143,7 +1153,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	int *id;
 	int fbram_offset;
 	int remainder, remainder_mode2;
-
+	unsigned int unknownrebootflag = 0xAAAAAAAA;
 	/*
 	 * fb info initialization
 	 */
@@ -1347,6 +1357,11 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		}
 	}
 	pr_debug("reserved[4] %u\n", var->reserved[4]);
+	
+	//Taylor--B
+	if(display_id)
+		var_backup = var;
+	//Taylor--E
 
 		/*
 		 * id field for fb app
@@ -1496,11 +1511,37 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	MSM_FB_INFO
 	    ("FrameBuffer[%d] %dx%d size=%d bytes is registered successfully!\n",
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
-
+#ifdef CONFIG_CCI_KLOG	
+	unknownrebootflag = *unknownreboot; 
+	printk("%s: Display decide unknownrebootflag = 0x%08x\n",__func__,unknownrebootflag);
+	if(unknownrebootflag != 0xc0dedead)
+	{
+#endif		 
 #ifdef CONFIG_FB_MSM_LOGO
 	/* Flip buffer */
+	//Taylor--20121018--B
+	if (mfd->index == 0)
+	{
+		if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported)) {
+			msm_fb_open(fbi,0);
+			printk("%s: Display on\n",__func__);
+			cci_fb_UpdateDone=1; //Taylor--20121105
+			msm_fb_pan_display(var,fbi);
+		}
+		
+		if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported)){
+			msm_fb_pan_display(var,fbi);
+		}
+	}
+	//Taylor--20121018--E
+
+/*Taylor--20121018
 	if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported))
 		;
+*/
+#endif
+#ifdef CONFIG_CCI_KLOG	
+	}
 #endif
 	ret = 0;
 
@@ -1640,6 +1681,13 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	}
 #endif /* MSM_FB_ENABLE_DBGFS */
 
+//Taylor--20121018--B
+#ifdef CONFIG_FB_MSM_LOGO
+	bl_updated=1;
+	msm_fb_set_backlight(mfd,85);
+	printk("%s : Trun on Backlight\n",__func__);
+#endif
+//Taylor--20121018--E
 	return ret;
 }
 
@@ -1811,6 +1859,13 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 			     (var->activate == FB_ACTIVATE_VBL));
 	mdp_dma_pan_update(info);
 	up(&msm_fb_pan_sem);
+
+	//Taylor--20121105--B
+	if(!cci_fb_UpdateDone)
+		mdelay(30);
+	
+	cci_fb_UpdateDone=1;
+	//Taylor--20121105--E
 
 	if (unset_bl_level && !bl_updated)
 		schedule_delayed_work(&mfd->backlight_worker,
@@ -2997,6 +3052,13 @@ static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 	}
 
 	ret = mdp4_overlay_play(info, &req);
+	
+	//Taylor--20121105--B
+	if(!cci_fb_UpdateDone)
+		mdelay(30);
+	
+	cci_fb_UpdateDone=1;
+	//Taylor--20121105--E
 
 	if (unset_bl_level && !bl_updated)
 		schedule_delayed_work(&mfd->backlight_worker,

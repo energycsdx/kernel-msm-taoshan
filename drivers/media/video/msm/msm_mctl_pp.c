@@ -115,6 +115,11 @@ int msm_mctl_check_pp(struct msm_cam_media_controller *p_mctl,
 		if (p_mctl->pp_info.pp_ctrl.pp_msg_type == OUTPUT_TYPE_T)
 			*pp_type = OUTPUT_TYPE_T;
 		break;
+//S JackBB 2012/12/3 [Q111M]
+       case MSM_V4L2_EXT_CAPTURE_MODE_RDI:
+               *pp_divert_type =  OUTPUT_TYPE_R;
+               break;
+//E JackBB 2012/12/3 [Q111M]
 	default:
 		break;
 	}
@@ -875,7 +880,9 @@ int msm_mctl_pp_release_free_frame(
 			__func__);
 		return -EINVAL;
 	}
-
+//S JackBB 2012/12/3 [Q111M]
+    memset(&p_mctl->pp_info.div_frame[image_mode], 0, sizeof(struct msm_free_buf));
+//E JackBB 2012/12/3 [Q111M]
 	rc = msm_mctl_release_free_buf(p_mctl, pcam_inst,
 					image_mode, &free_buf);
 	D("%s: release free buf, rc = %d, phy = 0x%x",

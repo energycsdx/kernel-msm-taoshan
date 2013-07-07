@@ -228,4 +228,31 @@ int __init msm_gpio_of_init(struct device_node *node,
 			    struct device_node *parent);
 #endif
 
+// Luke -->
+#define EU_BAND_HW_ID  1
+#define US_BAND_HW_ID  2
+
+#define EVT_BOARD_HW_ID        1
+#define DVT1_BOARD_HW_ID      2
+#define DVT1_1_BOARD_HW_ID  3
+#define DVT2_BOARD_HW_ID      4
+#define DVT3_BOARD_HW_ID     5
+#define DVT3_1_BOARD_HW_ID     6
+#define PVT_BOARD_HW_ID      7
+#define MP_BOARD_HW_ID       8
+
+#define SA76_HW_ID  1
+#define SA77_HW_ID  2
+#define SA86_HW_ID  3
+#define SA87_HW_ID  4
+
+#define WITH_NFC     1
+#define WITHOUT_NFC  0
+
+int nfc_with_hw_id(void);
+int band_type_with_hw_id(void);
+int board_type_with_hw_id(void);
+int model_name_with_hw_id(void);
+// Luke <--
+
 #endif /* __ASM_ARCH_MSM_GPIO_H */

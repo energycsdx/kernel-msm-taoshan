@@ -1,4 +1,5 @@
 /* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -735,4 +736,6 @@ const u8 sitar_reg_readable[SITAR_CACHE_SIZE] = {
 	[SITAR_A_CDC_MBHC_INT_CTL] = 1,
 	[SITAR_A_CDC_MBHC_DEBUG_CTL] = 1,
 	[SITAR_A_CDC_MBHC_SPARE] = 1,
+	[SITAR_A_CDC_RX2_VOL_CTL_B2_CTL] = 1,  // AUD_MOD
+	[SITAR_A_CDC_RX3_VOL_CTL_B2_CTL] = 1,  // AUD_MOD
 };

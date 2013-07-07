@@ -13,6 +13,82 @@
 #include <linux/module.h>
 #include "msm_actuator.h"
 
+/*Linus add for init code test, start*/
+static int af_enable = 1;
+static int af_move_all = 0;
+static int move_delay = 15;
+static int af_run_step = 0;
+static int non_linear_code = 169;
+static int linear_code = 11;
+static int run_default_code = 1;
+static int af_total_step = 40;
+static int initial_DAC = 0;
+static int af_tune_damping = 0;
+static int damping = 0;
+
+
+module_param_named(
+        af_enable, af_enable,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        af_move_all, af_move_all,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        move_delay, move_delay,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        af_run_step, af_run_step,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        non_linear_code, non_linear_code,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        linear_code, linear_code,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        run_default_code, run_default_code,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        af_total_step, af_total_step,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        initial_DAC, initial_DAC,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        af_tune_damping, af_tune_damping,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+module_param_named(
+        damping, damping,
+        int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+
+
+
+/*Linus add for init code test, end*/
+
+
+
 static struct msm_actuator_ctrl_t msm_actuator_t;
 
 static struct msm_actuator msm_vcm_actuator_table = {
@@ -71,6 +147,7 @@ int32_t msm_actuator_i2c_write(struct msm_actuator_ctrl_t *a_ctrl,
 	uint32_t size = a_ctrl->reg_tbl_size, i = 0;
 	int32_t rc = 0;
 	CDBG("%s: IN\n", __func__);
+	CDBG("[Linus]next_lens_position = %d\n", next_lens_position);
 	for (i = 0; i < size; i++) {
 		if (write_arr[i].reg_write_type == MSM_ACTUATOR_WRITE_DAC) {
 			value = (next_lens_position <<
@@ -100,7 +177,13 @@ int32_t msm_actuator_i2c_write(struct msm_actuator_ctrl_t *a_ctrl,
 					i2c_byte2 = value & 0xFF;
 				}
 			} else {
+/*B:[bug328] af porting, cloony 20120807 */
+#ifdef ORG_VER
 				i2c_byte1 = (value & 0xFF00) >> 8;
+#else
+				i2c_byte1 = ((value & 0x0300) >> 8) | 0xC0;
+#endif// ORG_VER
+/*E:[bug328] af porting, cloony 20120807 */
 				i2c_byte2 = value & 0xFF;
 			}
 		} else {
@@ -165,8 +248,23 @@ int32_t msm_actuator_write_focus(
 	uint16_t damping_code_step = 0;
 	uint16_t wait_time = 0;
 
-	damping_code_step = damping_params->damping_step;
-	wait_time = damping_params->damping_delay;
+	if (af_tune_damping !=0)
+		{
+		 damping_code_step = damping;
+		 wait_time = move_delay ;
+		
+		}else{
+
+		damping_code_step = damping_params->damping_step;
+	    wait_time = damping_params->damping_delay;
+		}
+
+	CDBG("[Linus]af_enable = %d\n", af_enable);
+
+	if (af_enable == 0)
+	{
+	    return rc;
+	}
 
 	/* Write code based on damping_code_step in a loop */
 	for (next_lens_pos =
@@ -185,6 +283,7 @@ int32_t msm_actuator_write_focus(
 			return rc;
 		}
 		curr_lens_pos = next_lens_pos;
+		CDBG("[Linus][for]\n");
 		usleep(wait_time);
 	}
 
@@ -236,6 +335,7 @@ int32_t msm_actuator_move_focus(
 		__func__,
 		dir,
 		num_steps);
+	CDBG("[Linus]%s called, dir %d, num_steps %d\n", __func__, dir, num_steps);	
 
 	if (dest_step_pos == a_ctrl->curr_step_pos)
 		return rc;
@@ -243,11 +343,15 @@ int32_t msm_actuator_move_focus(
 	curr_lens_pos = a_ctrl->step_position_table[a_ctrl->curr_step_pos];
 	CDBG("curr_step_pos =%d dest_step_pos =%d curr_lens_pos=%d\n",
 		a_ctrl->curr_step_pos, dest_step_pos, curr_lens_pos);
+	CDBG("[Linus]curr_step_pos =%d dest_step_pos =%d curr_lens_pos=%d\n",	a_ctrl->curr_step_pos, dest_step_pos, curr_lens_pos);
+	CDBG("[Linus]sign_dir = %d \n", sign_dir);
+
 
 	while (a_ctrl->curr_step_pos != dest_step_pos) {
 		step_boundary =
 			a_ctrl->region_params[a_ctrl->curr_region_index].
 			step_bound[dir];
+		CDBG("[Linus]curr_region_index = %d\n", a_ctrl->curr_region_index);
 		if ((dest_step_pos * sign_dir) <=
 			(step_boundary * sign_dir)) {
 
@@ -328,6 +432,44 @@ int32_t msm_actuator_init_step_table(struct msm_actuator_ctrl_t *a_ctrl,
 	if (a_ctrl->step_position_table == NULL)
 		return -EFAULT;
 
+	if (run_default_code != 1)
+	{
+	    
+	    //extern uint8_t imx134_afcalib_data[6];
+	    //CDBG("[Joker777] %d, %d, %d, %d, %d, %d\n", imx134_afcalib_data[0], imx134_afcalib_data[1], imx134_afcalib_data[2], imx134_afcalib_data[3], imx134_afcalib_data[4], imx134_afcalib_data[5]);
+
+		cur_code = initial_DAC;
+		
+	    a_ctrl->step_position_table[step_index++] = cur_code;
+		
+	    for (region_index = 0; region_index < a_ctrl->region_size;region_index++) {
+
+			if (region_index > 0)
+			{
+			code_per_step =linear_code;
+			
+			}else{
+			code_per_step =non_linear_code;
+			}
+			step_boundary =
+				a_ctrl->region_params[region_index].step_bound[MOVE_NEAR];
+			for (; step_index <= step_boundary;
+				step_index++) {
+				cur_code += code_per_step;
+				if (cur_code < max_code_size)
+					a_ctrl->step_position_table[step_index] =cur_code;
+				else {
+					for (; step_index < af_total_step;step_index++)
+						a_ctrl->step_position_table[step_index] =max_code_size;	
+					return rc;
+				}
+			}
+		}
+		CDBG("[Linus]modify the code_per_step\n");
+	}else{
+
+	CDBG("[Joker777]msm_actuator_init_step_table, init_code=%d\n", set_info->af_tuning_params.initial_code);
+
 	cur_code = set_info->af_tuning_params.initial_code;
 	a_ctrl->step_position_table[step_index++] = cur_code;
 	for (region_index = 0;
@@ -338,12 +480,20 @@ int32_t msm_actuator_init_step_table(struct msm_actuator_ctrl_t *a_ctrl,
 		step_boundary =
 			a_ctrl->region_params[region_index].
 			step_bound[MOVE_NEAR];
+
+      //Joker add
+		CDBG("[Joker777]msm_actuator_init_step_table, code_per_step=%d\n", a_ctrl->region_params[region_index].code_per_step);
+		CDBG("[Joker777]msm_actuator_init_step_table, step_boundary=%d\n", a_ctrl->region_params[region_index].step_bound[MOVE_NEAR]);
+
 		for (; step_index <= step_boundary;
 			step_index++) {
 			cur_code += code_per_step;
 			if (cur_code < max_code_size)
+            {
 				a_ctrl->step_position_table[step_index] =
 					cur_code;
+                CDBG("[Joker777]msm_actuator_init_step_table, step_position_table[%d] = %d\n", step_index, cur_code);
+            }
 			else {
 				for (; step_index <
 					set_info->af_tuning_params.total_steps;
@@ -356,6 +506,7 @@ int32_t msm_actuator_init_step_table(struct msm_actuator_ctrl_t *a_ctrl,
 				return rc;
 			}
 		}
+	}
 	}
 
 	return rc;
@@ -376,6 +527,7 @@ int32_t msm_actuator_set_default_focus(
 int32_t msm_actuator_power_down(struct msm_actuator_ctrl_t *a_ctrl)
 {
 	int32_t rc = 0;
+	rc = msm_camera_i2c_write(&a_ctrl->i2c_client, 0x30, 0x00, a_ctrl->i2c_data_type);//20130321, SP
 	if (a_ctrl->vcm_enable) {
 		rc = gpio_direction_output(a_ctrl->vcm_pwd, 0);
 		if (!rc)
@@ -392,6 +544,12 @@ int32_t msm_actuator_init(struct msm_actuator_ctrl_t *a_ctrl,
 	struct reg_settings_t *init_settings = NULL;
 	int32_t rc = -EFAULT;
 	uint16_t i = 0;
+	/*Linus add for init code test, start*/
+	uint16_t DAC_code = 0; 
+	uint16_t i2c_byte1 = 0, i2c_byte2 = 0;
+	uint16_t af_step = 0;
+	uint16_t init_code = 0;
+	/*Linus add for init code test, end*/
 	CDBG("%s: IN\n", __func__);
 
 	for (i = 0; i < ARRAY_SIZE(actuators); i++) {
@@ -476,6 +634,83 @@ int32_t msm_actuator_init(struct msm_actuator_ctrl_t *a_ctrl,
 	a_ctrl->curr_step_pos = 0;
 	a_ctrl->curr_region_index = 0;
 
+	CDBG("[Linus]msm_actuator_init ok\n");
+	/*Linus add for init code test, start*/
+	if (af_move_all != 0)
+	{
+	   for (DAC_code = 0; DAC_code < 901; DAC_code++)
+	   {
+	        i2c_byte1 = ((DAC_code & 0x0300) >> 8) | 0xC0;
+	        i2c_byte2 = DAC_code & 0xFF ;
+			
+	   		rc = msm_camera_i2c_write(&a_ctrl->i2c_client,
+			i2c_byte1, i2c_byte2, a_ctrl->i2c_data_type);
+
+			if(rc != 0)
+				{
+				CDBG("[Linus] I2C write fail\n");
+				return -EFAULT;
+				}
+			CDBG("[Linus]DAC_code = %d\n", DAC_code);
+			usleep(move_delay);
+	  }
+	}
+
+	if (af_run_step != 0)
+	{
+	    CDBG("[Linus]af_run_step\n");
+	    init_code = initial_DAC;
+		DAC_code = DAC_code + init_code;
+        for (af_step = 0; af_step <= af_total_step; af_step++)
+        {
+        	if (af_step < 3)
+	        {    
+	         DAC_code+=non_linear_code;
+		    }else{
+		     DAC_code+=linear_code;
+			}
+			
+		    i2c_byte1 = ((DAC_code & 0x0300) >> 8) | 0xC0;
+	        i2c_byte2 = DAC_code & 0xFF ;
+			
+	   		rc = msm_camera_i2c_write(&a_ctrl->i2c_client,
+			i2c_byte1, i2c_byte2, a_ctrl->i2c_data_type);
+
+			if(rc != 0)
+				{
+				CDBG("[Linus] I2C write fail\n");
+				return -EFAULT;
+				}
+			usleep(move_delay);
+			CDBG("[Linus]af_step = %d\n", af_step);
+		}
+		
+		for (af_step = af_total_step; af_step > 0; af_step--)
+				{
+					if (af_step > 2)
+					{	 
+					 DAC_code-=linear_code;
+					}else{
+					 DAC_code-=non_linear_code;
+					}
+					
+					i2c_byte1 = ((DAC_code & 0x0300) >> 8) | 0xC0;
+					i2c_byte2 = DAC_code & 0xFF ;
+					
+					rc = msm_camera_i2c_write(&a_ctrl->i2c_client,
+					i2c_byte1, i2c_byte2, a_ctrl->i2c_data_type);
+		
+					if(rc != 0)
+						{
+						CDBG("[Linus] I2C write fail\n");
+						return -EFAULT;
+						}
+					usleep(move_delay);
+					CDBG("[Linus]af_step = %d\n", af_step);
+				}		
+	}
+	
+    /*Linus add for init code test, end*/
 	return rc;
 }
 

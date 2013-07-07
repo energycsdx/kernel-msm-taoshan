@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,6 +34,17 @@
 #include "modem_notifier.h"
 #include "ramdump.h"
 
+extern long system_flag;
+#ifdef CONFIG_CCI_KLOG
+extern long* powerpt;
+#endif
+
+
+#ifdef CONFIG_CCI_KLOG
+#include <linux/cciklog.h>
+#endif // #ifdef CONFIG_CCI_KLOG
+
+
 static int crash_shutdown;
 
 #define MAX_SSR_REASON_LEN 81U
@@ -43,6 +55,14 @@ static void log_modem_sfr(void)
 {
 	u32 size;
 	char *smem_reason, reason[MAX_SSR_REASON_LEN];
+
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	set_fault_state(0x5, -1, "modem");
+#endif // #if CCI_KLOG_CRASH_SIZE
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 
 	smem_reason = smem_get_entry(SMEM_SSR_REASON_MSS0, &size);
 	if (!smem_reason || !size) {
@@ -76,7 +96,15 @@ static void modem_wdog_check(struct work_struct *work)
 
 	q6_sw_wdog_addr = ioremap_nocache(Q6_SW_WDOG_ENABLE, 4);
 	if (!q6_sw_wdog_addr)
+
+	{
+	    if((inactive == system_flag) || (normalreboot == system_flag) || (adloadmode == system_flag) ||(poweroff == system_flag))
+		    system_flag = q6fatal;
+#ifdef CONFIG_CCI_KLOG			
+	    *powerpt = (POWERONOFFRECORD + system_flag);
+#endif		
 		panic("Unable to check modem watchdog status.\n");
+	}
 
 	regval = readl_relaxed(q6_sw_wdog_addr);
 	if (!regval) {

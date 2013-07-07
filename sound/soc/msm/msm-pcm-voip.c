@@ -531,6 +531,9 @@ static int msm_pcm_playback_copy(struct snd_pcm_substream *substream, int a,
 				list_first_entry(&prtd->free_in_queue,
 						struct voip_buf_node, list);
 			list_del(&buf_node->list);
+                        //AUD_MOD QCT start
+			spin_unlock_irqrestore(&prtd->dsp_lock, dsp_flags);
+                        //AUD_MOD QCT end
 			if (prtd->mode == MODE_PCM) {
 				ret = copy_from_user(&buf_node->frame.voc_pkt,
 							buf, count);
@@ -538,6 +541,9 @@ static int msm_pcm_playback_copy(struct snd_pcm_substream *substream, int a,
 			} else
 				ret = copy_from_user(&buf_node->frame,
 							buf, count);
+                        //AUD_MOD QCT start
+			spin_lock_irqsave(&prtd->dsp_lock, dsp_flags);
+                        //AUD_MOD QCT end
 			list_add_tail(&buf_node->list, &prtd->in_queue);
 			spin_unlock_irqrestore(&prtd->dsp_lock, dsp_flags);
 		} else {
@@ -582,6 +588,9 @@ static int msm_pcm_capture_copy(struct snd_pcm_substream *substream,
 			buf_node = list_first_entry(&prtd->out_queue,
 					struct voip_buf_node, list);
 			list_del(&buf_node->list);
+                        //AUD_MOD QCT start
+			spin_unlock_irqrestore(&prtd->dsp_ul_lock, dsp_flags);
+                        //AUD_MOD QCT end
 			if (prtd->mode == MODE_PCM)
 				ret = copy_to_user(buf,
 						   &buf_node->frame.voc_pkt,
@@ -595,6 +604,9 @@ static int msm_pcm_capture_copy(struct snd_pcm_substream *substream,
 					__func__, ret);
 				ret = -EFAULT;
 			}
+                        //AUD_MOD QCT start
+			spin_lock_irqsave(&prtd->dsp_ul_lock, dsp_flags);
+                        //AUD_MOD QCT end
 			list_add_tail(&buf_node->list,
 						&prtd->free_out_queue);
 			spin_unlock_irqrestore(&prtd->dsp_ul_lock, dsp_flags);

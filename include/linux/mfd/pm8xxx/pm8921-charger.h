@@ -1,5 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
- *
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -159,6 +159,15 @@ struct pm8921_charger_platform_data {
 	enum pm8921_chg_hot_thr		hot_thr;
 	int				rconn_mohm;
 	enum pm8921_chg_led_src_config	led_src_config;
+	//S:LO
+	int		vbat_low_alarm_thr;
+	int		vbat_up_alarm_thr;
+        unsigned chg_time_out_extra;
+        unsigned int            safety_time_ac;
+	unsigned int            safety_time_usb;
+	unsigned int		Tbat_adc_max;
+	unsigned int		Tbat_adc_min;
+	//E:LO
 };
 
 enum pm8921_charger_source {
@@ -171,6 +180,11 @@ enum pm8921_charger_source {
 void pm8921_charger_vbus_draw(unsigned int mA);
 int pm8921_charger_register_vbus_sn(void (*callback)(int));
 void pm8921_charger_unregister_vbus_sn(void (*callback)(int));
+
+//S:LO
+int pm8921_chg_safety_time_reset(void);
+//E:LO
+
 /**
  * pm8921_charger_enable -
  *

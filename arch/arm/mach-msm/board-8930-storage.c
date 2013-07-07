@@ -63,11 +63,24 @@ static struct msm_mmc_reg_data mmc_vdd_reg_data[MAX_SDCC_CONTROLLER] = {
 		 * hardware revisions - maybe once that is done, this can be
 		 * reverted.
 		 */
+		/**/
+		#ifdef ORG_VER
 		.always_on = 1,
 		.lpm_sup = 1,
+		#else
+		.always_on = 0,
+		.lpm_sup = 0,
+		#endif
+		/**/
 		.hpm_uA = 800000, /* 800mA */
 		.lpm_uA = 9000,
+		/**/
+		#ifdef ORG_VER
 		.reset_at_init = true,
+		#else
+		.reset_at_init = false,
+		#endif
+		/**/
 	},
 };
 
@@ -86,8 +99,15 @@ static struct msm_mmc_reg_data mmc_vdd_io_reg_data[MAX_SDCC_CONTROLLER] = {
 		.name = "sdc_vdd_io",
 		.high_vol_level = 2950000,
 		.low_vol_level = 1850000,
+		/**/
+		#ifdef ORG_VER
 		.always_on = 1,
 		.lpm_sup = 1,
+		#else
+		.always_on = 0,
+		.lpm_sup = 0,
+		#endif
+		/**/
 		/* Max. Active current required is 16 mA */
 		.hpm_uA = 16000,
 		/*
@@ -169,7 +189,13 @@ static struct msm_mmc_pad_pull sdc3_pad_pull_off_cfg[] = {
 	 * there is no current leak during sleep if external pull up
 	 * is connected to DATA lines.
 	 */
+	/**/
+	#ifdef ORG_VER
 	{TLMM_PULL_SDC3_DATA, GPIO_CFG_PULL_UP}
+	#else
+	{TLMM_PULL_SDC3_DATA, GPIO_CFG_PULL_DOWN}
+	#endif
+	/**/
 };
 
 static struct msm_mmc_pad_pull_data mmc_pad_pull_data[MAX_SDCC_CONTROLLER] = {
@@ -258,12 +284,17 @@ static struct mmc_platform_data msm8960_sdc3_data = {
 	.sup_clk_cnt	= ARRAY_SIZE(sdc3_sup_clk_rates),
 #ifdef CONFIG_MMC_MSM_SDC3_WP_SUPPORT
 /*TODO: Insert right replacement for PM8038 */
+
+/**/
+#ifdef ORG_VER
 #ifndef MSM8930_PHASE_2
 	.wpswitch_gpio	= PM8921_GPIO_PM_TO_SYS(16),
 #else
 	.wpswitch_gpio	= 66,
 	.is_wpswitch_active_low = true,
 #endif
+#endif
+/**/
 #endif
 	.vreg_data	= &mmc_slot_vreg_data[SDCC3],
 	.pin_data	= &mmc_slot_pin_data[SDCC3],
@@ -311,18 +342,26 @@ void __init msm8930_init_mmc(void)
 	 * This change to the boards will be true for newer versions of the SoC
 	 * as well.
 	 */
+	/**/
+	#ifdef ORG_VER
 	if ((SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 1 &&
 			SOCINFO_VERSION_MINOR(socinfo_get_version()) >= 2) ||
 			machine_is_msm8930_cdp()) {
 		msm8960_sdc3_data.vreg_data->vdd_data->always_on = false;
 		msm8960_sdc3_data.vreg_data->vdd_data->reset_at_init = false;
 	}
+	#endif
+        /**/
 
 	/* SDC3: External card slot */
+	/**/
+        #ifdef ORG_VER
 	if (!machine_is_msm8930_cdp()) {
 		msm8960_sdc3_data.wpswitch_gpio = 0;
 		msm8960_sdc3_data.is_wpswitch_active_low = false;
 	}
+	#endif
+	/**/
 
 	msm_add_sdcc(3, &msm8960_sdc3_data);
 #endif

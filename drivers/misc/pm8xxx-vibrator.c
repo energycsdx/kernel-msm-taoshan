@@ -1,5 +1,5 @@
 /* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
- *
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -269,9 +269,9 @@ static int __devinit pm8xxx_vib_probe(struct platform_device *pdev)
 	rc = timed_output_dev_register(&vib->timed_dev);
 	if (rc < 0)
 		goto err_read_vib;
-
+#if 0
 	pm8xxx_vib_enable(&vib->timed_dev, pdata->initial_vibrate_ms);
-
+#endif
 	platform_set_drvdata(pdev, vib);
 
 	vib_dev = vib;

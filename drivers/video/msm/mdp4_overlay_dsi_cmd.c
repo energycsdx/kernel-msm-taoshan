@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,6 +33,8 @@
 #include "mdp4.h"
 
 static int vsync_start_y_adjust = 4;
+//extern int mipi_timeout; //Taylor
+extern int display_id; //Taylor
 
 #define MAX_CONTROLLER	1
 
@@ -479,6 +482,12 @@ static void mdp4_dsi_cmd_wait4dmap(int cndx)
 
 	vctrl = &vsync_ctrl_db[cndx];
 
+	//Taylor--B
+	if(display_id)
+		if(read_mipi_state())
+			return;
+	//Taylor--E
+
 	if (atomic_read(&vctrl->suspend) > 0)
 		return;
 	if (!wait_for_completion_timeout(
@@ -534,6 +543,15 @@ static void primary_rdptr_isr(int cndx)
 			} else {
 				/* wait one more vsycn */
 				vctrl->expire_tick += 1;
+				//Taylor--B
+				if(display_id){
+					if(read_mipi_state()){
+						pr_err("%s: no more wait for vsync\n",__func__);
+						vctrl->pan_display--;
+					}
+				}
+		
+				//Taylor--E
 			}
 		}
 	}
@@ -1107,6 +1125,10 @@ void mdp_dsi_cmd_overlay_suspend(struct msm_fb_data_type *mfd)
 	}
 }
 
+//B:Luke
+#ifndef ORIGINAL_VERSION
+extern int wait_mipi_dma;
+#endif // #ifndef ORIGINAL_VERSION
 void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd)
 {
 	int cndx = 0;
@@ -1115,10 +1137,24 @@ void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd)
 	unsigned long flags;
 	int clk_set_on = 0;
 
+//Luke
+#ifndef ORIGINAL_VERSION
+	if(wait_mipi_dma==3 )
+	{
+		pr_debug("[MIPI] %s start 1\n", __func__);
+#endif // #ifndef ORIGINAL_VERSION
 	vctrl = &vsync_ctrl_db[cndx];
 
 	if (!mfd->panel_power_on)
 		return;
+	
+	//Taylor--B
+	if (display_id){
+		//if (mipi_timeout)
+		if(read_mipi_state())
+			return;
+	}
+	//Taylor--E
 
 	pipe = vctrl->base_pipe;
 	if (pipe == NULL) {
@@ -1165,4 +1201,9 @@ void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd)
 	mdp4_dsi_cmd_pipe_commit(cndx, 0);
 	mdp4_overlay_mdp_perf_upd(mfd, 0);
 	mutex_unlock(&mfd->dma->ov_mutex);
+//Luke
+#ifndef ORIGINAL_VERSION
+	}
+#endif // #ifndef ORIGINAL_VERSION
+//E:Luke
 }

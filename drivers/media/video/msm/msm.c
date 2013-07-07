@@ -269,6 +269,7 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 				struct msm_ctrl_cmd *out)
 {
 	int rc = 0;
+	uint8_t wait_count;//20130201
 	void *value;
 	struct msm_queue_cmd *rcmd;
 	struct msm_queue_cmd *event_qcmd;
@@ -337,9 +338,29 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 
 	/* wait for config return status */
 	D("Waiting for config status\n");
+//B:20130201
+#ifdef ORG_VER
 	rc = wait_event_interruptible_timeout(queue->wait,
 		!list_empty_careful(&queue->list),
 		msecs_to_jiffies(out->timeout_ms));
+#else
+	/* wait event may be interrupted by sugnal,
+	 * in this case -ERESTARTSYS is returned and retry is needed.
+	 * Now we only retry once. */
+	wait_count = 10;
+	do {
+		rc = wait_event_interruptible_timeout(queue->wait,
+			!list_empty_careful(&queue->list),
+			msecs_to_jiffies(out->timeout_ms));
+		wait_count--;
+		if (rc != -ERESTARTSYS)
+			break;
+		D("%s: wait_event interrupted by signal, remain_count = %d",
+			__func__, wait_count);
+		msleep(20);
+	} while (wait_count > 0);
+#endif //ORG_VER
+//E:20130201
 	D("Waiting is over for config status\n");
 	if (list_empty_careful(&queue->list)) {
 		if (!rc)

@@ -3513,7 +3513,15 @@ void print_modules(void)
 	struct module *mod;
 	char buf[8];
 
+//[DA80] ==> BugID#xxx : CCI KLog Collector, added by Jimmy@CCI
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	printk(KERN_ALERT "Modules linked in:");
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 	printk(KERN_DEFAULT "Modules linked in:");
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+//[DA80] <== BugID#xxx : CCI KLog Collector, added by Jimmy@CCI
 	/* Most callers should already have preempt disabled, but make sure */
 	preempt_disable();
 	list_for_each_entry_rcu(mod, &modules, list)

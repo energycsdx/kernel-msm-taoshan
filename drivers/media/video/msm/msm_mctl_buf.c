@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -648,7 +649,10 @@ int msm_mctl_release_free_buf(struct msm_cam_media_controller *pmctl,
 			(uint32_t) videobuf2_to_pmem_contig(&buf->vidbuf, 0);
 		if (free_buf->ch_paddr[0] == buf_phyaddr) {
 			D("%s buf = 0x%x\n", __func__, free_buf->ch_paddr[0]);
-			buf->state = MSM_BUFFER_STATE_UNUSED;
+//S JackBB 2012/12/3 [Q111M]
+			//buf->state = MSM_BUFFER_STATE_UNUSED;
+            buf->state = MSM_BUFFER_STATE_QUEUED;
+//E JackBB 2012/12/3 [Q111M]
 			rc = 0;
 			break;
 		}

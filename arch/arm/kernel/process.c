@@ -412,24 +412,66 @@ void __show_regs(struct pt_regs *regs)
 	unsigned long flags;
 	char buf[64];
 
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	printk(KERN_ALERT "CPU: %d    %s  (%s %.*s)\n",
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 	printk("CPU: %d    %s  (%s %.*s)\n",
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 		raw_smp_processor_id(), print_tainted(),
 		init_utsname()->release,
 		(int)strcspn(init_utsname()->version, " "),
 		init_utsname()->version);
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	print_symbol(KERN_ALERT "PC is at %s\n", instruction_pointer(regs));
+	print_symbol(KERN_ALERT "LR is at %s\n", regs->ARM_lr);
+	printk(KERN_ALERT "pc : [<%08lx>]    lr : [<%08lx>]    psr: %08lx\n"
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 	print_symbol("PC is at %s\n", instruction_pointer(regs));
 	print_symbol("LR is at %s\n", regs->ARM_lr);
 	printk("pc : [<%08lx>]    lr : [<%08lx>]    psr: %08lx\n"
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 	       "sp : %08lx  ip : %08lx  fp : %08lx\n",
 		regs->ARM_pc, regs->ARM_lr, regs->ARM_cpsr,
 		regs->ARM_sp, regs->ARM_ip, regs->ARM_fp);
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	printk(KERN_ALERT "r10: %08lx  r9 : %08lx  r8 : %08lx\n",
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 	printk("r10: %08lx  r9 : %08lx  r8 : %08lx\n",
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 		regs->ARM_r10, regs->ARM_r9,
 		regs->ARM_r8);
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	printk(KERN_ALERT "r7 : %08lx  r6 : %08lx  r5 : %08lx  r4 : %08lx\n",
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 	printk("r7 : %08lx  r6 : %08lx  r5 : %08lx  r4 : %08lx\n",
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 		regs->ARM_r7, regs->ARM_r6,
 		regs->ARM_r5, regs->ARM_r4);
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	printk(KERN_ALERT "r3 : %08lx  r2 : %08lx  r1 : %08lx  r0 : %08lx\n",
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 	printk("r3 : %08lx  r2 : %08lx  r1 : %08lx  r0 : %08lx\n",
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 		regs->ARM_r3, regs->ARM_r2,
 		regs->ARM_r1, regs->ARM_r0);
 
@@ -440,7 +482,15 @@ void __show_regs(struct pt_regs *regs)
 	buf[3] = flags & PSR_V_BIT ? 'V' : 'v';
 	buf[4] = '\0';
 
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+	printk(KERN_ALERT "Flags: %s  IRQs o%s  FIQs o%s  Mode %s  ISA %s  Segment %s\n",
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 	printk("Flags: %s  IRQs o%s  FIQs o%s  Mode %s  ISA %s  Segment %s\n",
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 		buf, interrupts_enabled(regs) ? "n" : "ff",
 		fast_interrupts_enabled(regs) ? "n" : "ff",
 		processor_modes[processor_mode(regs)],
@@ -463,7 +513,15 @@ void __show_regs(struct pt_regs *regs)
 #endif
 		asm("mrc p15, 0, %0, c1, c0\n" : "=r" (ctrl));
 
+
+#ifdef CCI_KLOG_CRASH_SIZE
+#if CCI_KLOG_CRASH_SIZE
+		printk(KERN_ALERT "Control: %08x%s\n", ctrl, buf);
+#endif // #if CCI_KLOG_CRASH_SIZE
+#else // #ifdef CCI_KLOG_CRASH_SIZE
 		printk("Control: %08x%s\n", ctrl, buf);
+#endif // #ifdef CCI_KLOG_CRASH_SIZE
+
 	}
 #endif
 

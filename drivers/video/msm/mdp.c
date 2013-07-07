@@ -4,6 +4,7 @@
  *
  * Copyright (c) 2007-2012, Code Aurora Forum. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2658,6 +2659,7 @@ static int mdp_probe(struct platform_device *pdev)
 #ifndef CONFIG_FB_MSM_MDP303
 		mfd->dma_fnc = mdp4_dsi_cmd_overlay;
 		mipi = &mfd->panel_info.mipi;
+		mdp4_dsi_rdptr_init(0);//Taylor--20121220
 		mfd->vsync_init = mdp4_dsi_rdptr_init;
 		mfd->vsync_show = mdp4_dsi_cmd_show_event;
 		if (mfd->panel_info.pdest == DISPLAY_1) {
@@ -2696,6 +2698,7 @@ static int mdp_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_FB_MSM_DTV
 	case DTV_PANEL:
+		mdp4_dtv_vsync_init(0);//Taylor--20121220
 		mfd->vsync_init = mdp4_dtv_vsync_init;
 		mfd->vsync_show = mdp4_dtv_show_event;
 		pdata->on = mdp4_dtv_on;
@@ -2842,7 +2845,7 @@ static int mdp_probe(struct platform_device *pdev)
 	mdp4_extn_disp = 0;
 
 	if (mfd->vsync_init != NULL) {
-		mfd->vsync_init(0);
+		//mfd->vsync_init(0); //Taylor--20121220
 
 		if (!mfd->vsync_sysfs_created) {
 			mfd->dev_attr.attr.name = "vsync_event";
@@ -2963,12 +2966,12 @@ static void mdp_early_suspend(struct early_suspend *h)
 #ifdef CONFIG_FB_MSM_DTV
 	mdp4_dtv_set_black_screen();
 #endif
-	mdp_footswitch_ctrl(FALSE);
+	mdp_footswitch_ctrl(FALSE);//Taylor--20120906
 }
 
 static void mdp_early_resume(struct early_suspend *h)
 {
-	mdp_footswitch_ctrl(TRUE);
+	mdp_footswitch_ctrl(TRUE);//Taylor--20120906
 	mutex_lock(&mdp_suspend_mutex);
 	mdp_suspended = FALSE;
 	mutex_unlock(&mdp_suspend_mutex);

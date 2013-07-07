@@ -1,4 +1,5 @@
 /* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -816,7 +817,15 @@ struct msm_snapshot_pp_status {
 #define CFG_START_STREAM              44
 #define CFG_STOP_STREAM               45
 #define CFG_GET_CSI_PARAMS            46
-#define CFG_MAX			47
+//  Jim Lai 20121019 
+#define CFG_GET_STATS_DATA            47
+/*S  JackBB 2012/10/24 */
+#define CFG_SET_ATR_CTRL              48
+/*E  JackBB 2012/10/24 */
+//S JackBB 2012/12/3 [Q111M]
+#define CFG_HDR_UPDATE                49
+//E JackBB 2012/12/3 [Q111M]
+#define CFG_MAX			50
 
 
 #define MOVE_NEAR	0
@@ -1034,12 +1043,39 @@ struct sensor_pict_fps {
 struct exp_gain_cfg {
 	uint16_t gain;
 	uint32_t line;
+//S JackBB 2012/12/3 [Q111M]
+       int32_t luma_avg;
+       uint16_t fgain;
+//E JackBB 2012/12/3 [Q111M]
 };
+
+/*S: Jim Lai 20120925 */
+struct wb_gain_cfg {
+	uint16_t r_gain;
+	uint16_t g_gain;
+	uint16_t b_gain;
+};
+/*E: Jim Lai 20120925 */
 
 struct focus_cfg {
 	int32_t steps;
 	int dir;
 };
+
+//S JackBB 2012/12/3 [Q111M]
+enum sensor_hdr_update_t
+{
+       SENSOR_HDR_UPDATE_AWB,
+       SENSOR_HDR_UPDATE_LSC,
+};
+
+struct sensor_hdr_update_parm_t
+{
+       enum sensor_hdr_update_t type;
+       uint16_t awb_gain_r, awb_gain_b;
+       uint8_t lsc_table[280];
+};
+//E JackBB 2012/12/3 [Q111M]
 
 struct fps_cfg {
 	uint16_t f_mult;
@@ -1130,6 +1166,13 @@ struct sensor_output_info_t {
 	struct msm_sensor_output_info_t *output_info;
 	uint16_t num_info;
 };
+
+/*S:Jim Lai 20121019 */
+#define MAX_IMX134_AE_REGION 16*16*2
+struct stats_data_t {
+	uint8_t imx134_ae_stats[MAX_IMX134_AE_REGION];
+};
+/*E:Jim Lai 20121019 */
 
 struct mirror_flip {
 	int32_t x_mirror;
@@ -1268,6 +1311,9 @@ struct sensor_cfg_data {
 		uint32_t pict_max_exp_lc;
 		uint16_t p_fps;
 		uint8_t iso_type;
+		/*S: Jim Lai 20121019 */
+		struct stats_data_t stats_data;
+		/*E: Jim Lai 20121019 */
 		struct sensor_init_cfg init_info;
 		struct sensor_pict_fps gfps;
 		struct exp_gain_cfg exp_gain;
@@ -1279,6 +1325,9 @@ struct sensor_cfg_data {
 		struct sensor_output_info_t output_info;
 		struct msm_eeprom_data_t eeprom_data;
 		struct csi_lane_params_t csi_lane_params;
+//S JackBB 2012/12/3 [Q111M]
+        struct sensor_hdr_update_parm_t hdr_update_parm;
+//E JackBB 2012/12/3 [Q111M]
 		/* QRD */
 		uint16_t antibanding;
 		uint8_t contrast;
@@ -1291,6 +1340,7 @@ struct sensor_cfg_data {
 		struct cord aec_cord;
 		int is_autoflash;
 		struct mirror_flip mirror_flip;
+        int atr_ctrl;
 	} cfg;
 };
 
@@ -1425,6 +1475,19 @@ struct msm_calib_wb {
 	uint16_t gr_over_gb;
 };
 
+struct msm_eeprom_support32 {
+	uint32_t is_supported;
+	uint32_t size;
+	uint32_t index;
+	uint32_t qvalue;
+};
+
+struct msm_calib_wb32 {
+	uint32_t r_over_g;
+	uint32_t b_over_g;
+	uint32_t gr_over_gb;
+};
+
 struct msm_calib_af {
 	uint16_t macro_dac;
 	uint16_t inf_dac;
@@ -1432,10 +1495,18 @@ struct msm_calib_af {
 };
 
 struct msm_calib_lsc {
-	uint16_t r_gain[221];
-	uint16_t b_gain[221];
-	uint16_t gr_gain[221];
-	uint16_t gb_gain[221];
+	uint16_t h_r_gain[63];
+	uint16_t h_b_gain[63];
+	uint16_t h_gr_gain[63];
+	uint16_t h_gb_gain[63];
+	uint16_t l_r_gain[63];
+	uint16_t l_b_gain[63];
+	uint16_t l_gr_gain[63];
+	uint16_t l_gb_gain[63];
+	uint16_t f_r_gain[63];
+	uint16_t f_b_gain[63];
+	uint16_t f_gr_gain[63];
+	uint16_t f_gb_gain[63];
 };
 
 struct pixel_t {
@@ -1452,7 +1523,7 @@ struct msm_calib_dpc {
 
 struct msm_camera_eeprom_info_t {
 	struct msm_eeprom_support af;
-	struct msm_eeprom_support wb;
+	struct msm_eeprom_support32 wb;
 	struct msm_eeprom_support lsc;
 	struct msm_eeprom_support dpc;
 };
