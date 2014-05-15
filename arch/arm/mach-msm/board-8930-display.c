@@ -608,6 +608,7 @@ static struct platform_device wfd_device = {
 #endif
 
 #ifdef CONFIG_MSM_BUS_SCALING
+#ifdef CONFIG_FB_MSM_DTV //Turn off HDMI feature--Taylor--20120725--B
 static struct msm_bus_vectors dtv_bus_init_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
@@ -657,6 +658,7 @@ static struct lcdc_platform_data dtv_pdata = {
 	.bus_scale_table = &dtv_bus_scale_pdata,
 	.lcdc_power_save = hdmi_panel_power,
 };
+#endif //Turn off HDMI feature--Taylor--20120725--E
 #endif
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
@@ -870,7 +872,9 @@ void __init msm8930_init_fb(void)
 	msm_fb_register_device("mdp", &mdp_pdata);
 	msm_fb_register_device("mipi_dsi", &mipi_dsi_pdata);
 #ifdef CONFIG_MSM_BUS_SCALING
+#ifdef CONFIG_FB_MSM_DTV //Turn off HDMI feature--Taylor--20120725--B
 	msm_fb_register_device("dtv", &dtv_pdata);
+#endif //Turn off HDMI feature--Taylor--20120725--E
 #endif
 }
 
