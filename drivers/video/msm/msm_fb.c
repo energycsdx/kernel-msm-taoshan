@@ -1620,8 +1620,26 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 #endif		 
 #ifdef CONFIG_FB_MSM_LOGO
 	/* Flip buffer */
+	//Taylor--20121018--B
+	if (mfd->index == 0)
+	{
+		if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported)) {
+			msm_fb_open(fbi,0);
+			printk("%s: Display on\n",__func__);
+			//cci_fb_UpdateDone=1; //Taylor--20121105
+			msm_fb_pan_display(var,fbi);
+		}
+		
+		if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported)){
+			msm_fb_pan_display(var,fbi);
+		}
+	}
+	//Taylor--20121018--E
+
+/*Taylor--20121018
 	if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported))
 		;
+*/
 #endif
 #ifdef CONFIG_CCI_KLOG	
 	}
@@ -1766,6 +1784,14 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	}
 #endif /* MSM_FB_ENABLE_DBGFS */
 
+//Taylor--20121018--B
+#ifdef CONFIG_FB_MSM_LOGO
+	bl_updated=1;
+	mdelay(50);
+	msm_fb_set_backlight(mfd,85);
+	printk("%s : Trun on Backlight\n",__func__);
+#endif
+//Taylor--20121018--E
 	return ret;
 }
 
