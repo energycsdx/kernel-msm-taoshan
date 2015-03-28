@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1819,8 +1820,8 @@ static int sitar_find_k_value(unsigned int ldoh_v, unsigned int cfilt_mv)
 		max_mv = 2600;
 		break;
 	case SITAR_LDOH_2P85_V:
-		min_mv = 250;
-		max_mv = 2700;
+		min_mv = 260;  // BAM_S C 130530 [Mig:]
+		max_mv = 2850; // BAM_S C 130530 [Mig:]
 		break;
 	default:
 		goto done;
@@ -1870,7 +1871,7 @@ static void sitar_codec_switch_micbias(struct snd_soc_codec *codec,
 			sitar->cfilt_k_value = snd_soc_read(codec,
 					sitar->mbhc_bias_regs.cfilt_val);
 			cfilt_k_val = sitar_find_k_value(
-					sitar->pdata->micbias.ldoh_v, 1800);
+					sitar->pdata->micbias.ldoh_v, 2700);  // BAM_S C 130530 [Mig:]
 			snd_soc_update_bits(codec,
 				sitar->mbhc_bias_regs.cfilt_val,
 				0xFC, (cfilt_k_val << 2));
@@ -1951,7 +1952,7 @@ static int sitar_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 			SITAR_RELEASE_LOCK(sitar->codec_resource_lock);
 		}
 
-		snd_soc_update_bits(codec, w->reg, 0x1E, 0x00);
+		snd_soc_update_bits(codec, w->reg, 0x1E, 0x16);  // BAM_S C 130530 [Mig:]
 		sitar_codec_update_cfilt_usage(codec, cfilt_sel_val, 1);
 
 		if (strnstr(w->name, internal1_text, 30))
@@ -2237,7 +2238,9 @@ static void sitar_snd_soc_jack_report(struct sitar_priv *sitar,
 				     int mask)
 {
 	/* XXX: wake_lock_timeout()? */
+	printk("%s: enter (name:%s, status:%x(%d))\n", __func__, jack->jack->name, status, status);  // BAM_S C 130530 [Mig:]
 	snd_soc_jack_report_no_dapm(jack, status, mask);
+	printk("%s: leave\n", __func__);  // BAM_S C 130530 [Mig:]
 }
 
 static void hphocp_off_report(struct sitar_priv *sitar,
@@ -3025,7 +3028,7 @@ static void sitar_codec_enable_bandgap(struct snd_soc_codec *codec,
 		snd_soc_write(codec, SITAR_A_BIAS_CENTRAL_BG_CTL, 0x50);
 		if (SITAR_IS_1P0(sitar_core->version))
 			snd_soc_update_bits(codec, SITAR_A_LDO_H_MODE_1,
-								0xF3, 0x61);
+								0xFF, 0x6D);  // BAM_S C 130530 [Mig:]
 		usleep_range(1000, 1000);
 	} else {
 		pr_err("%s: Error, Invalid bandgap settings\n", __func__);
@@ -3396,7 +3399,7 @@ static int sitar_get_channel_map(struct snd_soc_dai *dai,
 	} else if (dai->id == AIF1_CAP) {
 		*tx_num = sitar_dai[dai->id - 1].capture.channels_max;
 		tx_slot[0] = tx_ch[cnt];
-		tx_slot[1] = tx_ch[4 + cnt];
+		tx_slot[1] = tx_ch[1 + cnt];  // BAM_S C 130530 [Mig:I26cc18c6]
 		tx_slot[2] = tx_ch[2 + cnt];
 		tx_slot[3] = tx_ch[3 + cnt];
 	}
@@ -4694,6 +4697,13 @@ static void sitar_hs_correct_gpio_plug(struct work_struct *work)
 			if (sitar->current_plug == PLUG_TYPE_NONE)
 				sitar_codec_report_plug(codec, 1,
 							SND_JACK_HEADPHONE);
+		// BAM_S C 130530 [Mig:If10dc92f]
+		} else if (plug_type == PLUG_TYPE_HIGH_HPH) {
+			pr_debug("High impedence hph detected, continue polling mic\n");
+			if (sitar->current_plug == PLUG_TYPE_NONE)
+				sitar_codec_report_plug(codec, 1,
+							SND_JACK_HEADPHONE);
+		// BAM_E C 130530
 		} else {
 			if (plug_type == PLUG_TYPE_GND_MIC_SWAP) {
 				pt_gnd_mic_swap_cnt++;

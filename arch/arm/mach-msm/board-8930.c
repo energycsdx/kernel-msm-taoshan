@@ -1005,10 +1005,10 @@ static struct wcd9xxx_pdata sitar_platform_data = {
 	.micbias = {
 		.ldoh_v = SITAR_LDOH_2P85_V,
 		.cfilt1_mv = 1800,
-		.cfilt2_mv = 1800,
+		.cfilt2_mv = 2700,  // BAM_S C 130530 [Mig:I9886348f]
 		.bias1_cfilt_sel = SITAR_CFILT1_SEL,
 		.bias2_cfilt_sel = SITAR_CFILT2_SEL,
-		.bias1_cap_mode = MICBIAS_EXT_BYP_CAP,
+		.bias1_cap_mode = MICBIAS_NO_EXT_BYP_CAP,  // BAM_S C 130530 [Mig:I9886348f]
 		.bias2_cap_mode = MICBIAS_NO_EXT_BYP_CAP,
 	},
 	.regulator = {
@@ -1071,10 +1071,10 @@ static struct wcd9xxx_pdata sitar1p1_platform_data = {
 	.micbias = {
 		.ldoh_v = SITAR_LDOH_2P85_V,
 		.cfilt1_mv = 1800,
-		.cfilt2_mv = 1800,
+		.cfilt2_mv = 2700,    // BAM_S C 130530 [Mig:I9886348f]
 		.bias1_cfilt_sel = SITAR_CFILT1_SEL,
 		.bias2_cfilt_sel = SITAR_CFILT2_SEL,
-		.bias1_cap_mode = MICBIAS_EXT_BYP_CAP,
+		.bias1_cap_mode = MICBIAS_NO_EXT_BYP_CAP,  // BAM_S C 130530 [Mig:I9886348f]
 		.bias2_cap_mode = MICBIAS_NO_EXT_BYP_CAP,
 	},
 	.regulator = {
