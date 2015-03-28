@@ -229,7 +229,13 @@ int32_t msm_sensor_write_exp_gain1(struct msm_sensor_ctrl_t *s_ctrl,
 		MSM_CAMERA_I2C_WORD_DATA);
 	msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 		s_ctrl->sensor_exp_gain_info->global_gain_addr, gain,
+/*B:20120919*/
+#ifdef CONFIG_IMX134
+		MSM_CAMERA_I2C_BYTE_DATA);
+#else
 		MSM_CAMERA_I2C_WORD_DATA);
+#endif
+/*E:20120919*/
 	s_ctrl->func_tbl->sensor_group_hold_off(s_ctrl);
 	return 0;
 }
@@ -257,7 +263,13 @@ int32_t msm_sensor_write_exp_gain2(struct msm_sensor_ctrl_t *s_ctrl,
 		MSM_CAMERA_I2C_WORD_DATA);
 	msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 		s_ctrl->sensor_exp_gain_info->global_gain_addr, gain,
+/*B:20120919*/
+#ifdef CONFIG_IMX134
+		MSM_CAMERA_I2C_BYTE_DATA);
+#else
 		MSM_CAMERA_I2C_WORD_DATA);
+#endif
+/*E:20120919*/
 	s_ctrl->func_tbl->sensor_group_hold_off(s_ctrl);
 	return 0;
 }
