@@ -19,6 +19,9 @@
 #include <mach/msm_bus_board.h>
 #include <mach/restart.h>
 #include <mach/socinfo.h>
+
+#include <linux/mfd/pm8xxx/vibrator.h>
+
 #include "devices.h"
 #include "board-8930.h"
 
@@ -307,6 +310,14 @@ static struct pm8xxx_pwrkey_platform_data pm8xxx_pwrkey_pdata = {
 	.wakeup			= 1,
 };
 
+
+static struct pm8xxx_vibrator_platform_data pm8xxx_vib_pdata = {
+	.initial_vibrate_ms  = 500,
+	.level_mV = 3000,
+	//.max_timeout_ms = 15000,
+	.max_timeout_ms =300000,
+};
+
 static int pm8921_therm_mitigation[] = {
 	1100,
 	700,
@@ -499,6 +510,9 @@ static struct pm8038_platform_data pm8038_platform_data __devinitdata = {
 	.mpp_pdata		= &pm8xxx_mpp_pdata,
 	.rtc_pdata              = &pm8xxx_rtc_pdata,
 	.pwrkey_pdata		= &pm8xxx_pwrkey_pdata,
+
+	.vib_pdata              = &pm8xxx_vib_pdata,
+
 	.misc_pdata		= &pm8xxx_misc_pdata,
 	.regulator_pdatas	= msm8930_pm8038_regulator_pdata,
 	.charger_pdata		= &pm8921_chg_pdata,
