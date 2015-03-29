@@ -68,6 +68,7 @@ obj-$(CONFIG_BMP18X_I2C)		+= bmp18x-i2c.o
 # Henry_lin, 20120708, [BugID 166] Porting sensor.
 #
 obj-$(CONFIG_BOSCH_BMA250)	+= bma250.o
+obj-$(CONFIG_SENSORS_AK8963)	+= akm8963.o
 #
 # Henry_lin
 #
