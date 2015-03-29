@@ -150,6 +150,27 @@ static struct gpiomux_setting gsbi12 = {
 // , 20120728, [ ] Correct GPIOs when suspend/resume..
 //
 #if 1   // add
+#if 0
+static struct gpiomux_setting gsbi1_sus_ecompass = {   //: not run this, only for ref
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_KEEPER,
+};
+#endif
+static struct gpiomux_setting gsbi1_init_ecompass = {  //== gsbi1_act_ecompass
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+#if 0
+static struct gpiomux_setting gsbi1_act_ecompass = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+#endif
+
 static struct gpiomux_setting gsbi12_init_g_sensor = {  //== gsbi12_act_g_sensor
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_8MA,
@@ -479,6 +500,7 @@ static struct msm_gpiomux_config msm8960_ethernet_configs[] = {
 #endif
 
 static struct msm_gpiomux_config msm8960_gsbi_configs[] __initdata = {
+#if 0   // MK, org
 	{
 		.gpio      = 6,		/* GSBI1 QUP SPI_DATA_MOSI */
 		.settings = {
@@ -493,18 +515,35 @@ static struct msm_gpiomux_config msm8960_gsbi_configs[] __initdata = {
 			[GPIOMUX_ACTIVE] = &spi_active,
 		},
 	},
+#endif
 	{
 		.gpio      = 8,		/* GSBI1 QUP SPI_CS_N */
 		.settings = {
+//
+// , 20120708, [ ] Porting sensor.
+//
+#if 0   // MK, org
 			[GPIOMUX_SUSPENDED] = &spi_suspended_config,
 			[GPIOMUX_ACTIVE] = &spi_active,
+#else
+			[GPIOMUX_SUSPENDED] = &gsbi1_init_ecompass,    //: when system boot will use this config
+#endif
+// 
 		},
 	},
 	{
 		.gpio      = 9,		/* GSBI1 QUP SPI_CLK */
 		.settings = {
+//
+// , 20120708, [ ] Porting sensor.
+//
+#if 0   // MK, org
 			[GPIOMUX_SUSPENDED] = &spi_suspended_config,
 			[GPIOMUX_ACTIVE] = &spi_active,
+#else
+			[GPIOMUX_SUSPENDED] = &gsbi1_init_ecompass,    //: when system boot will use this config
+#endif
+// 
 		},
 	},
 	{
@@ -864,12 +903,14 @@ static struct msm_gpiomux_config hap_lvl_shft_config[] __initdata = {
 
 static struct msm_gpiomux_config mdm_configs[] __initdata = {
 	/* AP2MDM_STATUS */
+#if 0   //: used by e-compass
 	{
 		.gpio = 94,
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &ap2mdm_cfg,
 		}
 	},
+#endif
 	/* MDM2AP_STATUS */
 	{
 		.gpio = 69,
@@ -877,6 +918,7 @@ static struct msm_gpiomux_config mdm_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &mdm2ap_status_cfg,
 		}
 	},
+#if 0   //: used by e-compass
 	/* MDM2AP_ERRFATAL */
 	{
 		.gpio = 70,
@@ -884,6 +926,7 @@ static struct msm_gpiomux_config mdm_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &mdm2ap_errfatal_cfg,
 		}
 	},
+#endif
 	/* AP2MDM_ERRFATAL */
 	{
 		.gpio = 95,

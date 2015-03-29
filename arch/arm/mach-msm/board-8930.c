@@ -109,6 +109,9 @@
 
 #include <linux/nfc/pn65n.h> 
 
+// , 20120708, [ ] Porting sensor.
+#include "linux/akm8963.h"
+//
 static struct platform_device msm_fm_platform_init = {
 	.name = "iris_fm",
 	.id   = -1,
@@ -1472,9 +1475,12 @@ static void __init msm8930_init_buses(void)
 #endif
 }
 
+#if 0   // MK, org
 static struct msm_spi_platform_data msm8960_qup_spi_gsbi1_pdata = {
 	.max_clock_speed = 15060000,
 };
+#endif
+
 
 #ifdef CONFIG_USB_MSM_OTG_72K
 static struct msm_otg_platform_data msm_otg_pdata;
@@ -2280,12 +2286,30 @@ static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi10_pdata = {
 	.src_clk_rate = 24000000,
 };
 
+
+//
+// , 20120708, [ ] Porting sensor. GSBI_1 config
+//
+#if 1
+static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
+{
+}
+
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi12_pdata = {
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 };
+static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi1_pdata = {
+    .clk_freq = 384000,
+    .src_clk_rate = 24000000,
+    .use_gsbi_shared_mode = 1,
+    .msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
+};
+#endif
+// 
 
 
+#if 0   // MK, org
 static struct ks8851_pdata spi_eth_pdata = {
 	.irq_gpio = KS8851_IRQ_GPIO,
 	.rst_gpio = KS8851_RST_GPIO,
@@ -2309,6 +2333,8 @@ static struct spi_board_info spi_board_info[] __initdata = {
 		.mode                   = SPI_MODE_0,
 	},
 };
+#endif
+
 
 static struct platform_device msm_device_saw_core0 = {
 	.name	= "saw-regulator",
@@ -2448,7 +2474,15 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_8960_riva,
 	&msm_pil_tzapps,
 	&msm_pil_vidc,
+//
+// , 20120708, [ ] Porting sensor. GSBI_1 config
+//
+#if 0   //org
 	&msm8960_device_qup_spi_gsbi1,
+#else
+	&msm8960_device_qup_i2c_gsbi1,
+#endif
+
 	&msm8960_device_qup_i2c_gsbi3,
 	&msm8960_device_qup_i2c_gsbi10,
 	&msm8960_device_qup_i2c_gsbi12,
@@ -2568,6 +2602,15 @@ static void __init msm8930_i2c_init(void)
 	int minor_ver = SOCINFO_VERSION_MINOR(socinfo_get_platform_version());
 	int major_ver = SOCINFO_VERSION_MAJOR(socinfo_get_platform_version());
 	void __iomem *gsbi_mem;
+
+//
+// , 20120708, [ ] Porting sensor. GSBI_1 config
+//
+#if 1
+	msm8960_device_qup_i2c_gsbi1.dev.platform_data =
+					&msm8960_i2c_qup_gsbi1_pdata;
+#endif
+// 
 
 	if (machine_is_msm8930_evt() &&
 		(socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE)) {
@@ -2862,6 +2905,26 @@ static struct i2c_board_info msm_i2c_bma250_gsensor_info[] = {
 };
 #endif  //defined(CONFIG_BOSCH_BMA250)
 
+#if defined(CONFIG_SENSORS_AK8963)
+static struct akm8963_platform_data g_sAkm8963 = {
+    .gpio_DRDY = 70,
+    .gpio_RST = 94,
+    .layout = 3,    // chip mounting direction
+    .outbit = 1    // 1:16bit output, 0:14bit
+};
+#define COMPASS_SENSOR_NAME 			"akm8963"
+
+static struct i2c_board_info msm_i2c_ak8963_ecompass_info[] = {
+	{
+		I2C_BOARD_INFO(COMPASS_SENSOR_NAME, 0x0C),
+		.irq = MSM_GPIO_TO_INT(70),
+		.platform_data = &g_sAkm8963,
+	},
+};
+#endif  //defined(CONFIG_SENSORS_AK8963)
+// 
+
+
 struct i2c_registry {
 	u8                     machs;
 	int                    bus;
@@ -3010,6 +3073,19 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 		sii_device_info,
 		ARRAY_SIZE(sii_device_info),
 	},
+
+
+//
+// , 20120708, [ ] Porting sensor.
+//
+#if defined(CONFIG_SENSORS_AK8963)
+	{
+		I2C_SURF | I2C_FFA | I2C_FLUID,
+		MSM_8930_GSBI12_QUP_I2C_BUS_ID,
+		msm_i2c_ak8963_ecompass_info,
+		ARRAY_SIZE(msm_i2c_ak8963_ecompass_info),
+	},
+#endif
 
 
 #if defined(CONFIG_TOUCHSCREEN_CYTTSP3_I2C) && \
@@ -3273,9 +3349,12 @@ static void __init msm8930_cdp_init(void)
 	android_usb_pdata.swfi_latency =
 			msm_rpmrs_levels[0].latency_us;
 	msm8930_init_gpiomux();
+
+#if 0   // MK, org
 	msm8960_device_qup_spi_gsbi1.dev.platform_data =
 				&msm8960_qup_spi_gsbi1_pdata;
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+#endif
 
 	/*
 	 * TODO: When physical 8930/PM8038 hardware becomes
