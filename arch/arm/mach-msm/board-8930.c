@@ -106,6 +106,8 @@
 #include "board-8930.h"
 #include "acpuclock-krait.h"
 
+#include <linux/nfc/pn65n.h> 
+
 static struct platform_device msm_fm_platform_init = {
 	.name = "iris_fm",
 	.id   = -1,
@@ -2257,10 +2259,20 @@ static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi8_pdata = {
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 };
+
+
+#if 0
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi9_pdata = {
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 };
+#else
+static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi9_pdata = {
+	.clk_freq = 384000,
+	.src_clk_rate = 24000000,
+};
+#endif
+
 
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi10_pdata = {
 	.clk_freq = 100000,
@@ -2795,6 +2807,27 @@ static struct i2c_board_info __initdata bmp18x_i2c_boardinfo[] = {
 };
 #endif
 
+
+#define NFC_IRQ         106
+#define NFC_DL          65
+#define NFC_EXT_EN      78
+
+static struct pn65n_i2c_platform_data nxp_nfc_pdata = {
+	.irq_gpio = NFC_IRQ,
+	.firm_gpio = NFC_DL,
+	.ven_gpio = NFC_EXT_EN,
+};
+
+static struct i2c_board_info nxp_nfc_i2c_info[] = 
+	{
+		{
+			I2C_BOARD_INFO(NFC_I2C_DEV_NAME, 0x28),
+			.irq = MSM_GPIO_TO_INT(NFC_IRQ),
+			.platform_data = &nxp_nfc_pdata,
+		},
+	};
+
+
 static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 #ifdef CONFIG_ISL9519_CHARGER
 	{
@@ -2866,6 +2899,15 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 	},
 #endif
 
+
+	
+	{
+		I2C_SURF | I2C_FFA | I2C_FLUID | I2C_EVT,
+		MSM_8930_GSBI9_QUP_I2C_BUS_ID,
+		nxp_nfc_i2c_info,
+		ARRAY_SIZE(nxp_nfc_i2c_info),
+	},
+	
 
 };
 #endif /* CONFIG_I2C */
