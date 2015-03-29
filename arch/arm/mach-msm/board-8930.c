@@ -103,6 +103,7 @@
 #include "smd_private.h"
 #include "pm-boot.h"
 #include "msm_watchdog.h"
+#include <linux/i2c/tsl2772.h>	//E:Andy_li 20120708 P/L sensor porting
 #include "board-8930.h"
 #include "acpuclock-krait.h"
 
@@ -2731,6 +2732,122 @@ static struct msm_pm_boot_platform_data msm_pm_boot_pdata __initdata = {
 #define I2C_LIQUID (1 << 5)
 #define I2C_EVT (1 << 6)
 
+
+#define MSM_8930_GSBI12_QUP_I2C_BUS_ID 12 //E:andy_li,20120708 p/l sensor porting 
+//S:Andy_li 20120708 P/L sensor porting
+#define GPIO_PROXIMITY_INT_N 49
+
+
+#define TSL2772_GPIO	49
+static struct regulator *tsl2772_vreg;
+static int board_tsl2772_init(struct device *dev)
+{
+	int ret;
+	dev_dbg(dev, "%s\n", __func__);
+	ret = gpio_request(TSL2772_GPIO, dev_name(dev));
+	if (ret) {
+		dev_err(dev, "%s: gpio_request failed!", __func__);
+		goto exit;
+	}
+	ret = gpio_direction_input(TSL2772_GPIO);
+	if (ret) {
+		dev_err(dev, "%s: gpio_direction_input failed!", __func__);
+		goto exit_free_gpio;
+	}
+	
+	return 0;
+exit_free_gpio:
+	gpio_free(TSL2772_GPIO);
+exit:
+	return ret;
+}
+
+static void board_tsl2772_teardown(struct device *dev)
+{
+	dev_dbg(dev, "%s\n", __func__);
+	gpio_free(TSL2772_GPIO);
+	if (tsl2772_vreg) {
+		regulator_put(tsl2772_vreg);
+		tsl2772_vreg = NULL;
+	}
+}
+
+static int board_tsl2772_power(struct device *dev, enum tsl2772_pwr_state state)
+{
+	int ret = 0;
+    static struct regulator *reg_lvs2;
+
+	tsl2772_vreg = regulator_get(NULL, "8038_l9");
+	if (IS_ERR(tsl2772_vreg)) {
+		ret = PTR_ERR(tsl2772_vreg);
+		tsl2772_vreg = NULL;
+		dev_err(dev, "%s: Failed to get reg '%s'\n", __func__,
+				"v-tsl2772");
+		return -EINVAL;
+	}
+
+	if (state == POWER_ON && tsl2772_vreg)
+	{	
+	    ret = regulator_set_voltage(tsl2772_vreg, 2850000, 2850000);
+	    if (ret) {
+	        regulator_put(tsl2772_vreg);
+	        return -EINVAL;
+	    }
+	    ret = regulator_enable(tsl2772_vreg);
+	    if (ret) {
+	        regulator_put(tsl2772_vreg);
+	        return -ENODEV;
+	    }
+
+#if 1
+	    reg_lvs2 = regulator_get(NULL,"8038_lvs2");
+	    if (IS_ERR(reg_lvs2)) {
+	        return -ENODEV;
+	    }
+	    ret = regulator_enable(reg_lvs2);
+	    if (ret) {
+	        regulator_put(reg_lvs2);
+	        return -ENODEV;
+	    }
+#endif
+	}
+	else if (state == POWER_OFF && tsl2772_vreg)
+	{
+		regulator_put(tsl2772_vreg);
+	}
+	else
+		dev_info(dev, "%s: nothing to do\n", __func__);
+	
+	return ret;
+}
+
+static struct tsl2772_i2c_platform_data tsl2772_data = {
+	.platform_power = board_tsl2772_power,
+	.platform_init = board_tsl2772_init,
+	.platform_teardown = board_tsl2772_teardown,
+	.prox_name = "tsl2772_proximity",
+	.als_name = "tsl2772_als",
+	.raw_settings = NULL,
+	.parameters = {
+		.prox_th_min = 740,//255,
+		.prox_th_max = 960,//480,
+		.als_gate = 10,
+	},
+	.als_can_wake = false,
+	.proximity_can_wake = true,
+};
+
+static struct i2c_board_info i2c_sensors_chipinfo[] __initdata = {
+	{
+		
+		I2C_BOARD_INFO("tsl2772", 0x39),
+		.platform_data = &tsl2772_data,
+		.irq		= MSM_GPIO_TO_INT(49),
+	},
+
+};
+//E:Andy_li 20120708 P/L sensor porting
+
 struct i2c_registry {
 	u8                     machs;
 	int                    bus;
@@ -2859,6 +2976,14 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 		ARRAY_SIZE(mxt_device_info_8930),
 	},
 #endif
+	//S:andyLi,20120708 p/l sensor porting
+	{
+		I2C_SURF | I2C_FFA | I2C_FLUID,
+		MSM_8930_GSBI12_QUP_I2C_BUS_ID,
+		i2c_sensors_chipinfo,
+		ARRAY_SIZE(i2c_sensors_chipinfo),
+	},
+	//E:andyLi,20120708 p/l sensor porting
 	{
 		I2C_EVT,
 		MSM_8930_GSBI3_QUP_I2C_BUS_ID,

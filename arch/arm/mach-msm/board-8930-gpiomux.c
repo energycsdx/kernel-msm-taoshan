@@ -76,6 +76,26 @@ static struct gpiomux_setting spi_suspended_config = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
+/*S: andy, P\L sensor porting*/
+#ifdef ORG_VER
+#else
+static struct gpiomux_setting plsensor_active_cfg = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+	.dir = GPIOMUX_IN,
+};
+
+static struct gpiomux_setting plsensor_suspend_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+        // Luke, GPIO tuning, p-sensor
+	// .pull = GPIOMUX_PULL_DOWN,
+	.pull = GPIOMUX_PULL_UP,
+};
+#endif
+/*E: andy, P\L sensor porting*/
+
 static struct gpiomux_setting gsbi3_suspended_cfg = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_2MA,
@@ -858,6 +878,20 @@ static struct msm_gpiomux_config msm8960_mdp_vsync_configs[] __initdata = {
 		},
 	}
 };
+/*S: andy, P/L sensor porting*/
+#ifdef ORG_VER
+#else
+static struct msm_gpiomux_config msm8930_plsensor_configs[] __initdata = {
+	{
+		.gpio = 49,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &plsensor_active_cfg,
+			[GPIOMUX_SUSPENDED] = &plsensor_suspend_cfg,
+		},
+	},
+};
+#endif
+/*E: andy, P/L sensor porting*/
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 static struct msm_gpiomux_config msm8960_hdmi_configs[] __initdata = {
@@ -1235,6 +1269,14 @@ int __init msm8930_init_gpiomux(void)
 
 	msm_gpiomux_install(msm8930_sd_det_config,
 			ARRAY_SIZE(msm8930_sd_det_config));
+
+/*S:andy, P/L sensor*/
+#ifdef ORG_VER
+#else
+	msm_gpiomux_install(msm8930_plsensor_configs,
+			ARRAY_SIZE(msm8930_plsensor_configs));
+#endif
+/*E:andy, P/L sensor*/
 
 	if (machine_is_msm8930_fluid() || machine_is_msm8930_mtp())
 		msm_gpiomux_install(msm8930_gyro_int_config,

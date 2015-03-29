@@ -77,6 +77,10 @@ VREG_CONSUMERS(L9) = {
 	REGULATOR_SUPPLY("cam_vaf",		"4-0048"),
 	REGULATOR_SUPPLY("cam_vana",            "4-0020"),
 	REGULATOR_SUPPLY("cam_vaf",             "4-0020"),
+	//S:Andy_li 20120708 P/L sensor porting
+	REGULATOR_SUPPLY("Vdd",      "12-0039"),
+	REGULATOR_SUPPLY("Vled",       "12-0039"),
+	//E:Andy_li 20120708 P/L sensor porting
 /* Regulators for 8930 QRD SGLTE EVT */
 	REGULATOR_SUPPLY("cam_vana",		"8-001a"),
 	REGULATOR_SUPPLY("cam_vana",		"8-006c"),
