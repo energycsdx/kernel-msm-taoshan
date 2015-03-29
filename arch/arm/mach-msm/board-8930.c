@@ -2848,6 +2848,20 @@ static struct i2c_board_info i2c_sensors_chipinfo[] __initdata = {
 };
 //E:Andy_li 20120708 P/L sensor porting
 
+
+//
+// , 20120708, [ ] Porting sensor.
+//
+#if defined(CONFIG_BOSCH_BMA250)
+#define G_SENSOR_NAME 			"bma250"
+
+static struct i2c_board_info msm_i2c_bma250_gsensor_info[] = {
+	{
+		I2C_BOARD_INFO(G_SENSOR_NAME, 0x19),
+	},
+};
+#endif  //defined(CONFIG_BOSCH_BMA250)
+
 struct i2c_registry {
 	u8                     machs;
 	int                    bus;
@@ -3024,6 +3038,15 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 	},
 #endif
 
+#ifdef CONFIG_BOSCH_BMA250
+	{
+		I2C_SURF | I2C_FFA | I2C_FLUID,
+		MSM_8930_GSBI1_QUP_I2C_BUS_ID,
+		msm_i2c_bma250_gsensor_info,
+		ARRAY_SIZE(msm_i2c_bma250_gsensor_info),
+	},
+#endif
+// 
 
 	
 	{

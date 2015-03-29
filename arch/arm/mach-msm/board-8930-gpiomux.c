@@ -138,11 +138,33 @@ static struct gpiomux_setting gsbi10 = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
+#if 0    // MK
 static struct gpiomux_setting gsbi12 = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
+#endif
+
+//
+// , 20120728, [ ] Correct GPIOs when suspend/resume..
+//
+#if 1   // add
+static struct gpiomux_setting gsbi12_init_g_sensor = {  //== gsbi12_act_g_sensor
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+#if 0
+static struct gpiomux_setting gsbi12_act_g_sensor = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+#endif
+#endif
+// 
 
 static struct gpiomux_setting external_vfr[] = {
 	/* Suspended state */
@@ -514,7 +536,14 @@ static struct msm_gpiomux_config msm8960_gsbi_configs[] __initdata = {
 	{
 		.gpio      = 44,	/* GSBI12 I2C QUP SDA */
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gsbi12,
+//
+// , 20120708, [ ] Porting sensor.
+//
+			//[GPIOMUX_SUSPENDED] = &gsbi12,
+			[GPIOMUX_SUSPENDED] = &gsbi12_init_g_sensor,     //: when system boot will use this config
+#if 0
+			[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,
+#endif
 		},
 	},
 	{
@@ -532,7 +561,14 @@ static struct msm_gpiomux_config msm8960_gsbi_configs[] __initdata = {
 	{
 		.gpio      = 45,	/* GSBI12 I2C QUP SCL */
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gsbi12,
+//
+// , 20120708, [ ] Porting sensor.
+//
+			//[GPIOMUX_SUSPENDED] = &gsbi12,
+			[GPIOMUX_SUSPENDED] = &gsbi12_init_g_sensor,     //: when system boot will use this config
+#if 0
+			[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,
+#endif
 		},
 	},
 	{
@@ -593,6 +629,7 @@ static struct msm_gpiomux_config msm8930_sglte_gsbi_configs[] __initdata = {
 			[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,
 		},
 	},
+#if 0  //henry MK 20130528
 	{
 		.gpio      = 44,	/* GSBI12 I2C QUP SDA */
 		.settings = {
@@ -605,6 +642,7 @@ static struct msm_gpiomux_config msm8930_sglte_gsbi_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gsbi12,
 		},
 	},
+#endif
 	{
 		.gpio      = 73,	/* GSBI10 I2C QUP SDA */
 		.settings = {
