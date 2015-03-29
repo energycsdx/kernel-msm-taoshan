@@ -208,6 +208,11 @@ config FB_MSM_MIPI_DSI_SAMSUNG
         select FB_MSM_MIPI_DSI
         default n
 
+config FB_MSM_MIPI_DSI_CHIMEI
+        bool
+        select FB_MSM_MIPI_DSI
+        default n
+
 config FB_MSM_MIPI_DSI_NT35510
 	bool
 	select FB_MSM_MIPI_DSI
@@ -354,6 +359,11 @@ config FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
 config FB_MSM_MIPI_SAMSUNG_CMD_FWVGA
 	bool
 	select FB_MSM_MIPI_DSI_SAMSUNG
+	default n
+
+config FB_MSM_MIPI_CHIMEI_CMD_FWVGA
+	bool
+	select FB_MSM_MIPI_DSI_CHIMEI
 	default n
 
 config FB_MSM_MIPI_ORISE_VIDEO_720P_PT
