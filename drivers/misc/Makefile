@@ -75,3 +75,6 @@ obj-$(CONFIG_QFP_FUSE) += qfp_fuse.o
 obj-y += tspdrv/
 obj-$(CONFIG_BU52031NVX) += pm8xxx-cradle.o
 obj-$(CONFIG_SLIMPORT_ANX7808)	+= slimport_anx7808/
+
+# 20130602, BugID3067: add NFC feature and PN65O checking to BSP1744
+obj-$(CONFIG_NXP_NFC_PN65N)	+= pn65n.o
