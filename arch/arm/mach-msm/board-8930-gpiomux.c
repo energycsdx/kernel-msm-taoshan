@@ -204,6 +204,7 @@ static struct gpiomux_setting wcnss_5wire_active_cfg = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
+#if 0 //Aaron add - 20120809, no use atmel touch driver!
 static struct gpiomux_setting atmel_resout_sus_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_6MA,
@@ -239,6 +240,34 @@ static struct gpiomux_setting atmel_int_sus_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+#endif
+
+static struct gpiomux_setting cyttsp_resout_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	//Aaron_add , for TP gpio_setting!
+	//.pull = GPIOMUX_PULL_UP,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_OUT_HIGH,
+};
+
+static struct gpiomux_setting cyttsp_resout_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+static struct gpiomux_setting cyttsp_int_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting cyttsp_int_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+//Aaron end
 
 static struct gpiomux_setting synaptic_rmi4_resout_sus_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -704,6 +733,7 @@ static struct msm_gpiomux_config wcnss_5wire_interface[] = {
 	},
 };
 
+#if 0 //Aaron add - 20120809, no use atmel touch driver!
 static struct msm_gpiomux_config msm8960_atmel_configs[] __initdata = {
 	{	/* TS INTERRUPT */
 		.gpio = 11,
@@ -727,6 +757,25 @@ static struct msm_gpiomux_config msm8960_atmel_configs[] __initdata = {
 		},
 	},
 };
+#endif
+
+static struct msm_gpiomux_config msm8960_cyttsp_configs[] __initdata = {
+	{	/* TS INTERRUPT */
+		.gpio = 11,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &cyttsp_int_act_cfg,
+			[GPIOMUX_SUSPENDED] = &cyttsp_int_sus_cfg,
+		},
+	},
+	{	/* TS RESOUT */
+		.gpio = 52,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &cyttsp_resout_act_cfg,
+			[GPIOMUX_SUSPENDED] = &cyttsp_resout_sus_cfg,
+		},
+	},
+};
+//Aaron end
 
 static struct msm_gpiomux_config msm8960_synaptic_rmi4_configs[] __initdata = {
 	{       /* TS INTERRUPT */
@@ -1120,8 +1169,21 @@ int __init msm8930_init_gpiomux(void)
 	msm_gpiomux_install(msm8960_gsbi_configs,
 			ARRAY_SIZE(msm8960_gsbi_configs));
 
+#if 0 //Aaron add - 20120809, no use atmel touch driver!
 	msm_gpiomux_install(msm8960_atmel_configs,
 			ARRAY_SIZE(msm8960_atmel_configs));
+#endif
+
+
+// Aaron
+
+
+#if defined(CONFIG_TOUCHSCREEN_CYTTSP3_I2C) && \
+		defined(CONFIG_TOUCHSCREEN_CYTTSP3_CORE)
+	msm_gpiomux_install(msm8960_cyttsp_configs,
+			ARRAY_SIZE(msm8960_cyttsp_configs));
+#endif
+//Aaron end
 
 	msm_gpiomux_install(msm8960_slimbus_config,
 			ARRAY_SIZE(msm8960_slimbus_config));

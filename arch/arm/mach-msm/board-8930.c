@@ -120,6 +120,9 @@ static struct platform_device msm_fm_platform_init = {
 #define MHL_GPIO_RESET          71
 #define MHL_GPIO_PWR_EN         5
 
+#define TOUCH_GPIO_IRQ_CYTTSP		11
+
+
 #if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
 
 struct sx150x_platform_data msm8930_sx150x_data[] = {
@@ -1871,6 +1874,7 @@ static struct i2c_board_info msm_isa1200_board_info[] __initdata = {
 #define MXT_TS_GPIO_IRQ			11
 #define MXT_TS_RESET_GPIO		52
 
+#if 0   //  MK
 static const u8 mxt_config_data_8930_v1[] = {
 	/* T6 Object */
 	 0, 0, 0, 0, 0, 0,
@@ -1952,6 +1956,7 @@ static const u8 mxt_config_data_8930_v2[] = {
 	/* T55 Object */
 	0, 0, 0, 0,
 };
+#endif
 
 static ssize_t mxt224e_vkeys_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
@@ -1998,6 +2003,7 @@ static void mxt_init_vkeys_8930(void)
 	return;
 }
 
+#if 0   //  MK
 static struct mxt_config_info mxt_config_array[] = {
 	{
 		.config			= mxt_config_data_8930_v1,
@@ -2049,7 +2055,10 @@ static struct mxt_platform_data mxt_platform_data_8930 = {
 	.reset_gpio		= MXT_TS_RESET_GPIO,
 	.irq_gpio		= MXT_TS_GPIO_IRQ,
 };
+#endif
 
+
+#if 0   // MK
 static struct i2c_board_info mxt_device_info_8930[] __initdata = {
 	{
 		I2C_BOARD_INFO("atmel_mxt_ts", 0x4a),
@@ -2057,8 +2066,23 @@ static struct i2c_board_info mxt_device_info_8930[] __initdata = {
 		.irq = MSM_GPIO_TO_INT(MXT_TS_GPIO_IRQ),
 	},
 };
+#endif
 
-/*»     Synaptics Thin Driver»  */
+
+#if defined(CONFIG_TOUCHSCREEN_CYTTSP3_I2C) && \
+		defined(CONFIG_TOUCHSCREEN_CYTTSP3_CORE)
+
+static struct i2c_board_info msm_i2c_cy8ctma340_ts_info[] = {
+	{
+		I2C_BOARD_INFO("cyttsp3-i2c", 0x24),
+		.irq = MSM_GPIO_TO_INT(TOUCH_GPIO_IRQ_CYTTSP),
+		//.platform_data = &cyttsp3_i2c_touch_platform_data,
+	},
+};
+#endif
+
+
+/*?    Synaptics Thin Driver? */
 
 #define CLEARPAD3202_ADDR 0x20
 #define CLEARPAD3202_ATTEN_GPIO (11)
@@ -2794,12 +2818,14 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 		msm_isa1200_board_info,
 		ARRAY_SIZE(msm_isa1200_board_info),
 	},
+#if 0    // MK
 	{
 		I2C_SURF | I2C_FFA | I2C_FLUID | I2C_EVT,
 		MSM_8930_GSBI3_QUP_I2C_BUS_ID,
 		mxt_device_info_8930,
 		ARRAY_SIZE(mxt_device_info_8930),
 	},
+#endif
 	{
 		I2C_EVT,
 		MSM_8930_GSBI3_QUP_I2C_BUS_ID,
@@ -2812,6 +2838,17 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 		sii_device_info,
 		ARRAY_SIZE(sii_device_info),
 	},
+
+
+#if defined(CONFIG_TOUCHSCREEN_CYTTSP3_I2C) && \
+		defined(CONFIG_TOUCHSCREEN_CYTTSP3_CORE)
+	{
+		I2C_SURF | I2C_FFA | I2C_FLUID,
+		MSM_8930_GSBI3_QUP_I2C_BUS_ID,
+		msm_i2c_cy8ctma340_ts_info,
+		ARRAY_SIZE(msm_i2c_cy8ctma340_ts_info),
+	},
+#endif
 #ifdef CONFIG_STM_LIS3DH
 	{
 		I2C_FFA | I2C_FLUID | I2C_EVT,
