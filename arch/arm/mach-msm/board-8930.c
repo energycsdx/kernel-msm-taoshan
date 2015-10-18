@@ -109,6 +109,11 @@
 
 #include <linux/nfc/pn65n.h> 
 
+// Luke  -->
+#include <linux/proc_fs.h>
+#include <linux/uaccess.h>
+// Luke  <--
+
 // , 20120708, [ ] Porting sensor.
 #include "linux/akm8963.h"
 //
@@ -186,6 +191,159 @@ struct sx150x_platform_data msm8930_sx150x_data[] = {
 #define MSM_CONTIG_MEM_SIZE  0x110C000
 #define MSM_ION_HEAP_NUM	1
 #endif
+
+// Luke  -->
+int cci_hw_id = 0;
+static int atoi(const char *name)
+{
+	int val = 0;
+
+	for (;; name++) {
+		switch (*name) {
+		case '0' ... '9':
+			val = 10*val+(*name-'0');
+			break;
+		default:
+			return val;
+		}
+	}
+}
+
+const char cci_board_type_str[][20] = 
+{
+"EVT board",
+"DVT1 board",	
+"DVT1-1 board",
+"DVT2 board",
+"DVT3 board",
+"DVT3_1 board",
+"PVT board",
+"MP board",
+""
+};
+
+const char cci_band_type_str[][20] = 
+{
+"EU band",
+"US band"	
+};
+
+const char cci_mode_name_str[][20] = 
+{
+"Sa76",
+"Sa77",
+"Sa86",
+"Sa87"
+};
+
+const char cci_nfc_name_str[][20] = 
+{
+"no NFC",
+"with NFC"
+};
+
+int cci_hw_model_name_read( char *page, char **start, off_t off, int count, int *eof, void *data );
+int cci_hw_board_type_read( char *page, char **start, off_t off, int count, int *eof, void *data );
+int cci_hw_band_type_read( char *page, char **start, off_t off, int count, int *eof, void *data );
+int cci_hw_nfc_type_read( char *page, char **start, off_t off, int count, int *eof, void *data );
+
+int cci_hw_model_name_read( char *page, char **start, off_t off, int count, int *eof, void *data )
+{
+   int model, len;
+   model = model_name_with_hw_id();
+   len = sprintf(page, "%s\n", cci_mode_name_str[ model - 1] );
+   return len;
+}
+int cci_hw_board_type_read( char *page, char **start, off_t off, int count, int *eof, void *data )
+{
+   int board_type, len;
+   board_type = board_type_with_hw_id();
+   len = sprintf(page, "%s\n", cci_board_type_str[ board_type -1 ] );
+   return len;
+}
+int cci_hw_band_type_read( char *page, char **start, off_t off, int count, int *eof, void *data )
+{
+   int band_type, len;
+   band_type	= band_type_with_hw_id();
+   len = sprintf(page, "%s\n", cci_band_type_str[ band_type - 1 ] );
+   return len;
+}
+int cci_hw_nfc_type_read( char *page, char **start, off_t off, int count, int *eof, void *data )
+{
+   int nfc, len;
+   nfc = nfc_with_hw_id();
+   len = sprintf(page, "%s\n", cci_nfc_name_str[ nfc ] );
+   return len;
+}
+// Luke -->
+//extern int cci_hw_id;
+
+void set_cci_hw_id(int hw_id)
+{
+    int board_type, band_type, nfc, model;
+
+    cci_hw_id = hw_id;
+	
+    board_type = board_type_with_hw_id();
+    band_type	= band_type_with_hw_id();
+    nfc = nfc_with_hw_id();
+    model = model_name_with_hw_id();
+	
+    printk("//board_get_hw_id [%x], %s, %s, %s, model name: %s \n", cci_hw_id, 
+   	cci_board_type_str[board_type - 1], cci_band_type_str[band_type - 1], cci_nfc_name_str[ nfc ], cci_mode_name_str[model - 1] );
+}
+EXPORT_SYMBOL(set_cci_hw_id);
+
+int nfc_with_hw_id(void)
+{
+    return  cci_hw_id & 0x01;
+}
+EXPORT_SYMBOL(nfc_with_hw_id);
+
+int band_type_with_hw_id(void)
+{
+    if( cci_hw_id & 0x02 )      return US_BAND_HW_ID;
+    else 	                return EU_BAND_HW_ID;
+}
+EXPORT_SYMBOL(band_type_with_hw_id);
+
+
+int board_type_with_hw_id(void)
+{
+    return ( ( (cci_hw_id>>4) & 0x07 ) + 1);
+}
+EXPORT_SYMBOL(board_type_with_hw_id);
+
+int model_name_with_hw_id(void)
+{
+    return ( ( cci_hw_id & 0x03 ) + 1);
+}
+EXPORT_SYMBOL(model_name_with_hw_id);
+// Luke <--
+
+static int __init board_get_hw_id(char *hw_id_str)
+{
+    int board_type, band_type, nfc, model;
+	
+    printk("//board_get_hw_id [%s]\n", hw_id_str);
+
+    cci_hw_id = atoi(hw_id_str);
+
+    board_type = board_type_with_hw_id();
+    band_type	= band_type_with_hw_id();
+    nfc = nfc_with_hw_id();
+    model = model_name_with_hw_id();
+	
+   printk("//board_get_hw_id [%x], %s, %s, %s, model name: %s \n", cci_hw_id, 
+   	cci_board_type_str[ board_type -1 ],
+   	cci_band_type_str[ band_type - 1 ], 
+       cci_nfc_name_str[ nfc ],
+       cci_mode_name_str[ model - 1] );
+      
+   return 1;
+}
+__setup("androidboot.hw_id=", board_get_hw_id);
+// Luke <--
 
 #ifdef CONFIG_KERNEL_MSM_CONTIG_MEM_REGION
 static unsigned msm_contig_mem_size = MSM_CONTIG_MEM_SIZE;
@@ -3483,6 +3641,12 @@ static void __init msm8930_cdp_init(void)
 
 	if (PLATFORM_IS_CHARM25())
 		platform_add_devices(mdm_devices, ARRAY_SIZE(mdm_devices));
+
+	// Luke 
+	create_proc_read_entry("cci_hw_model_name", 0, NULL, cci_hw_model_name_read, NULL);
+	create_proc_read_entry("cci_hw_board_type", 0, NULL, cci_hw_board_type_read, NULL);
+	create_proc_read_entry("cci_hw_band_type", 0, NULL, cci_hw_band_type_read, NULL);
+	create_proc_read_entry("cci_hw_nfc_type", 0, NULL, cci_hw_nfc_type_read, NULL);
 }
 
 MACHINE_START(MSM8930_CDP, "QCT MSM8930 CDP")
