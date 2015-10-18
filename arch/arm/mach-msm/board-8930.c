@@ -131,6 +131,7 @@ static struct platform_device msm_fm_platform_init = {
 #define KS8851_RST_GPIO		89
 #define KS8851_IRQ_GPIO		90
 #define HAP_SHIFT_LVL_OE_GPIO	47
+#define DISP_ID_GPIO		39 //Taylor--20121107
 
 #define HDMI_MHL_MUX_GPIO       73
 #define MHL_GPIO_INT            72
@@ -198,6 +199,7 @@ struct sx150x_platform_data msm8930_sx150x_data[] = {
 #define MSM_ION_HEAP_NUM	1
 #endif
 
+int display_id = 0; //Taylor--20121107
 // Luke  -->
 int cci_hw_id = 0;
 static int atoi(const char *name)
@@ -281,6 +283,28 @@ int cci_hw_nfc_type_read( char *page, char **start, off_t off, int count, int *e
    len = sprintf(page, "%s\n", cci_nfc_name_str[ nfc ] );
    return len;
 }
+//Taylor-->
+void get_display_id(void)
+{
+    int ret;
+    ret = gpio_request(DISP_ID_GPIO, "disp_id_gpio");
+    if (ret)
+    {
+	printk("Requesting DISP_ID_GPIO: FAILED !!!!\n"); 	
+    }
+    else
+    {
+	gpio_tlmm_config(GPIO_CFG(DISP_ID_GPIO, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	if (gpio_get_value(DISP_ID_GPIO) == 1)	display_id = 1;		
+    }
+    gpio_free(DISP_ID_GPIO);
+
+    if (display_id == 1)
+    	printk("DISPLAY: CHIMEI LCM!!\n");
+    else
+		printk("DISPLAY: SAMSUNG LCM!!\n");
+}
+//Taylor<--
 // Luke -->
 //extern int cci_hw_id;
 
@@ -3651,6 +3675,7 @@ static void __init msm8930_cdp_init(void)
 #ifdef CONFIG_MSM_CAMERA
 	msm8930_init_cam();
 #endif
+	get_display_id();//Taylor--20121107
 	msm8930_init_mmc();
 	if (!machine_is_msm8930_evt())
 		mxt_init_vkeys_8930();
