@@ -56,6 +56,9 @@
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_NUM	3
 #endif
+#ifdef CONFIG_CCI_KLOG
+#include <linux/ccistuff.h>
+#endif
 
 static unsigned char *fbram;
 static unsigned char *fbram_phys;
@@ -1610,11 +1613,18 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	MSM_FB_INFO
 	    ("FrameBuffer[%d] %dx%d size=%d bytes is registered successfully!\n",
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
-
+#ifdef CONFIG_CCI_KLOG	
+	printk("%s: Display decide unknownrebootflag = 0x%08x\n",__func__,unknownrebootflag);
+	if(unknownrebootflag != 0xc0dedead)
+	{
+#endif		 
 #ifdef CONFIG_FB_MSM_LOGO
 	/* Flip buffer */
 	if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported))
 		;
+#endif
+#ifdef CONFIG_CCI_KLOG	
+	}
 #endif
 	ret = 0;
 

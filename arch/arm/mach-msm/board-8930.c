@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -113,6 +114,11 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 // Luke  <--
+
+#ifdef CONFIG_CCI_KLOG
+#include <linux/cciklog.h>
+#endif // #ifdef CONFIG_CCI_KLOG
+
 
 // , 20120708, [ ] Porting sensor.
 #include "linux/akm8963.h"
@@ -344,6 +350,44 @@ static int __init board_get_hw_id(char *hw_id_str)
 }
 __setup("androidboot.hw_id=", board_get_hw_id);
 // Luke <--
+
+extern int cciaboot_flag;
+extern unsigned long startup_magic_flag;
+extern unsigned long warmboot_magic_flag;
+
+static int __init board_get_cciaboot_flag(char *cciaboot_flag_str)
+{
+    if(strncmp(cciaboot_flag_str, "cci", strlen("cci")) == 0) // M:LE
+    {
+      cciaboot_flag = 1;
+    }
+
+    return 0;
+}
+__setup("androidboot.cciaboot=", board_get_cciaboot_flag);
+
+static int __init board_get_startup_flag(char *startup_str)
+{
+    char *endptr;	/* local pointer to end of parsed string */
+    
+    unsigned long ret = simple_strtoul(startup_str, &endptr, 0);
+    startup_magic_flag = ret;
+    
+    return 0;
+}
+__setup("startup=", board_get_startup_flag);
+
+static int __init board_get_warmboot_flag(char *warmboot_str)
+{
+    char *endptr;	/* local pointer to end of parsed string */
+    
+    unsigned long ret = simple_strtoul(warmboot_str, &endptr, 0);
+    warmboot_magic_flag = ret;
+    
+    return 0;
+
+}
+__setup("warmboot=", board_get_warmboot_flag);
 
 #ifdef CONFIG_KERNEL_MSM_CONTIG_MEM_REGION
 static unsigned msm_contig_mem_size = MSM_CONTIG_MEM_SIZE;
@@ -1598,6 +1642,11 @@ static void __init msm8930_map_io(void)
 {
 	msm_shared_ram_phys = MSM_SHARED_RAM_PHYS;
 	msm_map_msm8930_io();
+
+#ifdef CONFIG_CCI_KLOG
+	cklc_set_memory_ready();
+#endif // #ifdef CONFIG_CCI_KLOG
+
 
 	if (socinfo_init() < 0)
 		pr_err("socinfo_init() failed!\n");

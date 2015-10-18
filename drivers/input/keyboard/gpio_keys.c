@@ -51,6 +51,8 @@ struct gpio_keys_drvdata {
 	struct gpio_button_data data[0];
 };
 
+bool camera_ctrl;
+
 /*
  * SYSFS interface for enabling/disabling keys and switches:
  *
@@ -324,6 +326,25 @@ static struct attribute_group gpio_keys_attr_group = {
 	.attrs = gpio_keys_attrs,
 };
 
+#ifdef CCI_HWKEY_ALLOW_FORCE_PANIC
+void HWKEY_vCheckEnterRamDump(void)
+{
+    int iData1 =-1,iData2 = -1, iData3 = -1;
+if(camera_ctrl)
+    iData2 = gpio_get_value(69);    // camera key
+else
+    iData2 = gpio_get_value(68);    // camera key
+    iData3 = gpio_get_value(47);    //vol-down
+
+    iData1 = gpio_get_value(48);    //vol-up
+
+    if(( iData1 == 0) &&( iData2 == 0) && (iData3 == 0) )
+    {
+        panic("RamDump cause by HW key!!");
+    }
+
+}
+#endif
 static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 {
 	const struct gpio_keys_button *button = bdata->button;
@@ -336,6 +357,9 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 			input_event(input, type, button->code, button->value);
 	} else {
 		input_event(input, type, button->code, !!state);
+#ifdef CCI_HWKEY_ALLOW_FORCE_PANIC
+		HWKEY_vCheckEnterRamDump();		//use Volume up+ down + Camera key to ramdump !
+#endif
 	}
 	input_sync(input);
 }
@@ -694,7 +718,7 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	/* Enable auto repeat feature of Linux input subsystem */
 	if (pdata->rep)
 		__set_bit(EV_REP, input->evbit);
-
+         camera_ctrl= (board_type_with_hw_id() > DVT2_BOARD_HW_ID);
 	for (i = 0; i < pdata->nbuttons; i++) {
 		const struct gpio_keys_button *button = &pdata->buttons[i];
 		struct gpio_button_data *bdata = &ddata->data[i];
