@@ -115,6 +115,11 @@
 #include <linux/uaccess.h>
 // Luke  <--
 
+//S:LO
+#include <linux/gpio_event.h>
+//E:LO
+
+
 #ifdef CONFIG_CCI_KLOG
 #include <linux/cciklog.h>
 #endif // #ifdef CONFIG_CCI_KLOG
@@ -123,6 +128,23 @@
 // , 20120708, [ ] Porting sensor.
 #include "linux/akm8963.h"
 //
+
+/*---------------------  Static Definitions -------------------------*/
+#define B8930_DEBUG 0   //0:disable, 1:enable
+#if(B8930_DEBUG)
+    #define Printhh(string, args...)    printk("B8930(K)=> "string, ##args);
+#else
+    #define Printhh(string, args...)
+#endif
+
+#define B8930_TIP 1 //give RD information. Set 1 if develop,and set 0 when release.
+#if(B8930_TIP)
+    #define PrintTip(string, args...)    printk("B8930(K)=> "string, ##args);
+#else
+    #define PrintTip(string, args...)
+#endif
+/*---------------------  Static Classes  ----------------------------*/
+
 static struct platform_device msm_fm_platform_init = {
 	.name = "iris_fm",
 	.id   = -1,
@@ -1688,8 +1710,13 @@ static void __init msm8930_init_irq(void)
 						(void *)MSM_QGIC_CPU_BASE);
 }
 
+#if 0   // for test
+extern int msm_spi_configure_gsbi_tt(void);
+#endif
+
 static void __init msm8930_init_buses(void)
 {
+	Printhh("[%s] enter..\n", __FUNCTION__);
 #ifdef CONFIG_MSM_BUS_SCALING
 	msm_bus_rpm_set_mt_mask();
 	msm_bus_8930_apps_fabric_pdata.rpm_enabled = 1;
@@ -1704,6 +1731,11 @@ static void __init msm8930_init_buses(void)
 	msm_bus_8930_sys_fpb.dev.platform_data = &msm_bus_8930_sys_fpb_pdata;
 	msm_bus_8930_cpss_fpb.dev.platform_data = &msm_bus_8930_cpss_fpb_pdata;
 #endif
+
+#if 0   // for test
+msm_spi_configure_gsbi_tt();
+#endif
+
 }
 
 #if 0   // MK, org
@@ -1768,9 +1800,15 @@ static struct msm_bus_scale_pdata usb_bus_scale_pdata = {
 static int hsusb_phy_init_seq[] = {
 	0x44, 0x80, /* set VBUS valid threshold
 			and disconnect valid threshold */
+#if 1 // S Adjust high speed USB eye diagram by HW
+	0x39, 0x81, /* update DC voltage level */
+	0x37, 0x82, /* set preemphasis and rise/fall time */
+	0x33, 0x83, /* set source impedance adjusment */
+#else
 	0x38, 0x81, /* update DC voltage level */
 	0x24, 0x82, /* set preemphasis and rise/fall time */
 	0x13, 0x83, /* set source impedance adjusment */
+#endif // E Adjust high speed USB eye diagram by HW
 	-1};
 
 #define MSM_MPM_PIN_USB1_OTGSESSVLD	40
@@ -2376,26 +2414,71 @@ static struct i2c_board_info sii_device_info[] __initdata = {
 	},
 };
 
+//S:LO
+#define GPIO_SW_SIM_DETECTION    33
+
+static struct gpio_event_direct_entry gpio_sw_gpio_map[] = {
+	{GPIO_SW_SIM_DETECTION, SW_JACK_PHYSICAL_INSERT},
+};
+
+static struct gpio_event_input_info gpio_sw_gpio_info = {
+	.info.func = gpio_event_input_func,
+	.flags = GPIOEDF_ACTIVE_HIGH,
+	.type = EV_SW,
+	.keymap = gpio_sw_gpio_map,
+	.keymap_size = ARRAY_SIZE(gpio_sw_gpio_map),
+	.debounce_time.tv64 = 100 * NSEC_PER_MSEC,
+        .info.no_suspend = true,
+};
+
+static struct gpio_event_info *gpio_key_info[] = {
+	&gpio_sw_gpio_info.info,
+};
+
+struct gpio_event_platform_data gpio_key_data = {
+	.name		= "gpio-key",
+	.info		= gpio_key_info,
+	.info_count	= ARRAY_SIZE(gpio_key_info),
+};
+
+struct platform_device gpio_key_device = {
+	.name	= GPIO_EVENT_DEV_NAME,
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &gpio_key_data,
+	},
+};
+//E:LO
+
 
 #ifdef MSM8930_PHASE_2
-
+#if 0 
 #define GPIO_VOLUME_UP_PM8038		PM8038_GPIO_PM_TO_SYS(3)
 #define GPIO_VOLUME_DOWN_PM8038		PM8038_GPIO_PM_TO_SYS(8)
 #define GPIO_CAMERA_SNAPSHOT_PM8038	PM8038_GPIO_PM_TO_SYS(10)
 #define GPIO_CAMERA_FOCUS_PM8038	PM8038_GPIO_PM_TO_SYS(11)
-
+#endif 
 #define GPIO_VOLUME_UP_PM8917		PM8917_GPIO_PM_TO_SYS(27)
 #define GPIO_VOLUME_DOWN_PM8917		PM8917_GPIO_PM_TO_SYS(28)
 #define GPIO_CAMERA_SNAPSHOT_PM8917	PM8917_GPIO_PM_TO_SYS(36)
 #define GPIO_CAMERA_FOCUS_PM8917	PM8917_GPIO_PM_TO_SYS(37)
+
+
+#define GPIO_VOLUME_UP		48
+#define GPIO_VOLUME_DOWN	47
+#define GPIO_CAMERA_SNAPSHOT	68
+#define GPIO_CAMERA_FOCUS	69
+
+#define GPIO_CAMERA_SNAPSHOT1	69
+#define GPIO_CAMERA_FOCUS1	68
 
 static struct gpio_keys_button keys_8930_pm8038[] = {
 	{
 		.code = KEY_VOLUMEUP,
 		.type = EV_KEY,
 		.desc = "volume_up",
-		.gpio = GPIO_VOLUME_UP_PM8038,
-		.wakeup = 1,
+		.gpio = GPIO_VOLUME_UP,
+		.wakeup = 0,
 		.active_low = 1,
 		.debounce_interval = 15,
 	},
@@ -2403,8 +2486,8 @@ static struct gpio_keys_button keys_8930_pm8038[] = {
 		.code = KEY_VOLUMEDOWN,
 		.type = EV_KEY,
 		.desc = "volume_down",
-		.gpio = GPIO_VOLUME_DOWN_PM8038,
-		.wakeup = 1,
+		.gpio = GPIO_VOLUME_DOWN,
+		.wakeup = 0,
 		.active_low = 1,
 		.debounce_interval = 15,
 	},
@@ -2412,7 +2495,7 @@ static struct gpio_keys_button keys_8930_pm8038[] = {
 		.code = KEY_CAMERA_FOCUS,
 		.type = EV_KEY,
 		.desc = "camera_focus",
-		.gpio = GPIO_CAMERA_FOCUS_PM8038,
+		.gpio = GPIO_CAMERA_FOCUS,
 		.wakeup = 1,
 		.active_low = 1,
 		.debounce_interval = 15,
@@ -2421,7 +2504,43 @@ static struct gpio_keys_button keys_8930_pm8038[] = {
 		.code = KEY_CAMERA_SNAPSHOT,
 		.type = EV_KEY,
 		.desc = "camera_snapshot",
-		.gpio = GPIO_CAMERA_SNAPSHOT_PM8038,
+		.gpio = GPIO_CAMERA_SNAPSHOT,
+		.wakeup = 0,
+		.active_low = 1,
+		.debounce_interval = 15,
+	},
+{
+		.code = KEY_VOLUMEUP,
+		.type = EV_KEY,
+		.desc = "volume_up",
+		.gpio = GPIO_VOLUME_UP,
+		.wakeup = 0,
+		.active_low = 1,
+		.debounce_interval = 15,
+	},
+	{
+		.code = KEY_VOLUMEDOWN,
+		.type = EV_KEY,
+		.desc = "volume_down",
+		.gpio = GPIO_VOLUME_DOWN,
+		.wakeup = 0,
+		.active_low = 1,
+		.debounce_interval = 15,
+	},
+	{
+		.code = KEY_CAMERA_FOCUS,
+		.type = EV_KEY,
+		.desc = "camera_focus",
+		.gpio = GPIO_CAMERA_FOCUS1,
+		.wakeup = 0,
+		.active_low = 1,
+		.debounce_interval = 15,
+	},
+	{
+		.code = KEY_CAMERA_SNAPSHOT,
+		.type = EV_KEY,
+		.desc = "camera_snapshot",
+		.gpio = GPIO_CAMERA_SNAPSHOT1,
 		.wakeup = 1,
 		.active_low = 1,
 		.debounce_interval = 15,
@@ -2468,9 +2587,11 @@ static struct gpio_keys_button keys_8930_pm8917[] = {
 };
 
 /* Add GPIO keys for 8930 */
+
 static struct gpio_keys_platform_data gpio_keys_8930_pdata = {
 	.buttons = keys_8930_pm8038,
-	.nbuttons = ARRAY_SIZE(keys_8930_pm8038),
+	//.nbuttons = ARRAY_SIZE(keys_8930_pm8038),
+        .nbuttons =8,
 };
 
 static struct platform_device gpio_keys_8930 = {
@@ -2483,14 +2604,17 @@ static struct platform_device gpio_keys_8930 = {
 #endif /* MSM8930_PHASE_2 */
 
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi4_pdata = {
-	.clk_freq = 100000,
+	.clk_freq = 384000,//2012/09/21
 	.src_clk_rate = 24000000,
+	.use_gsbi_shared_mode = 1,//2012/07/22
 };
 
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi3_pdata = {
-	.clk_freq = 100000,
+//	.clk_freq = 100000,
+	.clk_freq = 384000,
 	.src_clk_rate = 24000000,
 };
+
 
 
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi8_pdata = {
@@ -2527,8 +2651,15 @@ static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
 }
 
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi12_pdata = {
+    #if 0   // MK, org
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
+    #else
+    .clk_freq = 384000,
+    .src_clk_rate = 24000000,
+    .use_gsbi_shared_mode = 1,
+    .msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
+    #endif
 };
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi1_pdata = {
     .clk_freq = 384000,
@@ -2769,6 +2900,9 @@ static struct platform_device *common_devices[] __initdata = {
 	&coresight_etm1_device,
 	&msm_device_dspcrashd_8960,
 	&msm8960_device_watchdog,
+        //S:LO
+	&gpio_key_device,
+	//E:LO
 #ifdef MSM8930_PHASE_2
 	&gpio_keys_8930,
 #endif
@@ -3064,11 +3198,15 @@ static int board_tsl2772_power(struct device *dev, enum tsl2772_pwr_state state)
 	{	
 	    ret = regulator_set_voltage(tsl2772_vreg, 2850000, 2850000);
 	    if (ret) {
+	        //PrintTip("[%s] set_voltage l9 failed, rc=%d\n", __FUNCTION__, ret);
+	        //pr_err("set_voltage l9 failed, rc=%d\n", ret);
 	        regulator_put(tsl2772_vreg);
 	        return -EINVAL;
 	    }
 	    ret = regulator_enable(tsl2772_vreg);
 	    if (ret) {
+	        //PrintTip("[%s] enable l9 failed, rc=%d\n", __FUNCTION__, ret);
+	        //pr_err("enable l9 failed, rc=%d\n", ret);
 	        regulator_put(tsl2772_vreg);
 	        return -ENODEV;
 	    }
@@ -3076,10 +3214,14 @@ static int board_tsl2772_power(struct device *dev, enum tsl2772_pwr_state state)
 #if 1
 	    reg_lvs2 = regulator_get(NULL,"8038_lvs2");
 	    if (IS_ERR(reg_lvs2)) {
+	        //PrintTip("[%s] could not get 8038_lvs2, rc = %ld\n", __FUNCTION__, PTR_ERR(reg_lvs2));
+	        //pr_err("could not get 8038_lvs2, rc = %ld\n", PTR_ERR(reg_lvs2));
 	        return -ENODEV;
 	    }
 	    ret = regulator_enable(reg_lvs2);
 	    if (ret) {
+	        //PrintTip("[%s] enable lvs2 failed, rc=%d\n", __FUNCTION__, rc);
+	        //pr_err("enable lvs2 failed, rc=%d\n", ret);
 	        regulator_put(reg_lvs2);
 	        return -ENODEV;
 	    }
@@ -3088,6 +3230,7 @@ static int board_tsl2772_power(struct device *dev, enum tsl2772_pwr_state state)
 	else if (state == POWER_OFF && tsl2772_vreg)
 	{
 		regulator_put(tsl2772_vreg);
+		//ret = regulator_disable_handler(tsl2772_vreg, __func__);
 	}
 	else
 		dev_info(dev, "%s: nothing to do\n", __func__);
@@ -3198,6 +3341,16 @@ static struct i2c_board_info isl_charger_i2c_info[] __initdata = {
 	},
 };
 #endif /* CONFIG_ISL9519_CHARGER */
+//B 2012/07/22
+#ifdef CONFIG_LEDS_LM3561
+static struct i2c_board_info msm_i2c_lm3561_leds_info[] = {
+    {
+        I2C_BOARD_INFO("lm3561", 0x53),
+    },
+};
+#endif
+//E 2012/07/22
+
 
 #ifdef CONFIG_STM_LIS3DH
 static struct lis3dh_acc_platform_data lis3dh_accel = {
@@ -3328,6 +3481,17 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 		ARRAY_SIZE(msm_i2c_cy8ctma340_ts_info),
 	},
 #endif
+
+//B 2012/07/22
+#ifdef CONFIG_LEDS_LM3561
+    {
+        I2C_SURF | I2C_FFA | I2C_FLUID,
+        MSM_8930_GSBI4_QUP_I2C_BUS_ID,
+        msm_i2c_lm3561_leds_info,
+        ARRAY_SIZE(msm_i2c_lm3561_leds_info),
+    },
+#endif
+//E 2012/07/22
 #ifdef CONFIG_STM_LIS3DH
 	{
 		I2C_FFA | I2C_FLUID | I2C_EVT,
@@ -3367,6 +3531,121 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 };
 #endif /* CONFIG_I2C */
 
+
+//
+// , 20120728, [ ] Correct regulator.
+//
+//
+// , 20120713, [ ] Correct two regulators setting for L9 and LVS2.
+//
+//reaff
+//static int i2c_sensors_power_on(void)
+#if 1
+static int s_iSensorPowerOn(void)
+{
+    struct regulator *reg_l9;
+    struct regulator *reg_lvs2;
+    int rc = 0;
+//    struct regulator *reg_l11;
+
+
+    PrintTip("[%s] enter ...\n", __FUNCTION__);
+#if 1   //  be akm8963 do this, if MK this, andy_li driver will hang!!
+    reg_l9 = regulator_get(NULL,"8038_l9");
+    if (IS_ERR(reg_l9)) {
+        PrintTip("[%s] could not get 8038_l9, rc = %ld\n", __FUNCTION__, PTR_ERR(reg_l9));
+        pr_err("could not get 8038_l9, rc = %ld\n", PTR_ERR(reg_l9));
+        return -ENODEV;
+    }
+    rc = regulator_set_voltage(reg_l9, 2850000, 2850000);
+    if (rc) {
+        PrintTip("[%s] set_voltage l9 failed, rc=%d\n", __FUNCTION__, rc);
+        pr_err("set_voltage l9 failed, rc=%d\n", rc);
+        regulator_put(reg_l9);
+        return -EINVAL;
+    }
+    #if 0
+    rc = regulator_set_optimum_mode(reg_l9, 100000);
+    if (rc < 0) {
+        pr_err("set_optimum_mode l9 failed, rc=%d\n", rc);
+        regulator_put(reg_l9);
+        return -EINVAL;
+    }
+    #endif
+    rc = regulator_enable(reg_l9);
+    if (rc) {
+        PrintTip("[%s] enable l9 failed, rc=%d\n", __FUNCTION__, rc);
+        pr_err("enable l9 failed, rc=%d\n", rc);
+        regulator_put(reg_l9);
+        return -ENODEV;
+    }
+#endif
+
+#if 0
+    reg_l11 = regulator_get(NULL,"8038_l11");
+    if (IS_ERR(reg_l11)) {
+        PrintTip("[%s] could not get 8038_l11, rc = %ld\n", __FUNCTION__, PTR_ERR(reg_l11));
+        pr_err("could not get 8038_l11, rc = %ld\n", PTR_ERR(reg_l11));
+        return -ENODEV;
+    }
+    rc = regulator_set_voltage(reg_l11, 1800000, 1800000);
+    if (rc) {
+        PrintTip("[%s] set_voltage l11 failed, rc=%d\n", __FUNCTION__, rc);
+        pr_err("set_voltage l11 failed, rc=%d\n", rc);
+        regulator_put(reg_l11);
+        return -EINVAL;
+    }
+    #if 0
+    rc = regulator_set_optimum_mode(reg_l9, 100000);
+    if (rc < 0) {
+        pr_err("set_optimum_mode l9 failed, rc=%d\n", rc);
+        regulator_put(reg_l9);
+        return -EINVAL;
+    }
+    #endif
+    rc = regulator_enable(reg_l9);
+    if (rc) {
+        PrintTip("[%s] enable l9 failed, rc=%d\n", __FUNCTION__, rc);
+        pr_err("enable l9 failed, rc=%d\n", rc);
+        regulator_put(reg_l9);
+        return -ENODEV;
+    }
+#endif
+
+#if 1   // be akm8963 do this, if MK this, TP driver will hang!!
+    reg_lvs2 = regulator_get(NULL,"8038_lvs2");
+    if (IS_ERR(reg_lvs2)) {
+        PrintTip("[%s] could not get 8038_lvs2, rc = %ld\n", __FUNCTION__, PTR_ERR(reg_lvs2));
+        pr_err("could not get 8038_lvs2, rc = %ld\n", PTR_ERR(reg_lvs2));
+        return -ENODEV;
+    }
+    #if 0
+    rc = regulator_set_voltage(reg_lvs2, 1800000, 1800000);
+    if (rc) {
+        PrintTip("[%s] set_voltage lvs2 failed, rc=%d\n", __FUNCTION__, rc);
+        pr_err("set_voltage lvs2 failed, rc=%d\n", rc);
+        regulator_put(reg_lvs2);
+        return -EINVAL;
+    }
+    #endif
+    rc = regulator_enable(reg_lvs2);
+    if (rc) {
+        PrintTip("[%s] enable lvs2 failed, rc=%d\n", __FUNCTION__, rc);
+        pr_err("enable lvs2 failed, rc=%d\n", rc);
+        regulator_put(reg_lvs2);
+        return -ENODEV;
+    }
+
+    Printhh("[%s] rc=%d\n", __FUNCTION__, rc);
+
+    //return rc;
+#endif
+    return rc;
+
+}
+#endif
+
+
 static void __init register_i2c_devices(void)
 {
 #ifdef CONFIG_I2C
@@ -3387,6 +3666,8 @@ static void __init register_i2c_devices(void)
 	}
 #endif
 
+	Printhh("[%s] enter..\n", __FUNCTION__);
+
 	/* Build the matching 'supported_machs' bitmask */
 	if (machine_is_msm8930_cdp() || machine_is_msm8627_cdp())
 		mach_mask = I2C_SURF;
@@ -3398,6 +3679,22 @@ static void __init register_i2c_devices(void)
 		mach_mask = I2C_EVT;
 	else
 		pr_err("unmatched machine ID in register_i2c_devices\n");
+
+//
+// , 20120708, [ ] Porting sensor.
+//
+#if 0   
+	//  TBD! Temporary set mach_mask = I2C_FLUID, if  mach_mask==0
+	// because mach_mask always 0 now, i2c_register_board_info() can not be called. Need to fix later
+	if(mach_mask == 0)
+	{
+		PrintTip("[%s] mach_mask = %#x, something fail.....\n", __FUNCTION__, mach_mask);
+		mach_mask = I2C_FLUID;
+	}
+#else
+	PrintTip("[%s] mach_mask = %#x\n", __FUNCTION__, mach_mask);
+#endif
+
 
 	/* Run the array and install devices as appropriate */
 	for (i = 0; i < ARRAY_SIZE(msm8960_i2c_devices); ++i) {
@@ -3412,6 +3709,16 @@ static void __init register_i2c_devices(void)
 			msm8930_camera_i2c_devices.info,
 			msm8930_camera_i2c_devices.len);
 #endif
+
+
+//
+// , 20120713, [ ] Correct two regulators setting for L9 and LVS2.
+//
+#if 1
+	//PrintTip("[%s] call s_iSensorPowerOn()\n", __FUNCTION__);
+	s_iSensorPowerOn();
+#endif
+
 #endif
 }
 

@@ -3497,9 +3497,44 @@ smem_areas_alloc_fail:
 	return err_ret;
 }
 
+
+#define WRITE_IMEI_TO_SMEM
+#ifdef WRITE_IMEI_TO_SMEM
+#define IMEI_LENGTH 16
+static char imei[IMEI_LENGTH + 1] = {0};
+static int __init check_imei(char* imei_cmdline)
+{
+	if(imei_cmdline == NULL || strlen(imei_cmdline) == 0)
+	{
+		printk("[SMD]imei is empty\n");
+	}
+	else
+	{
+		if(strlen(imei_cmdline) == IMEI_LENGTH)
+		{
+//			printk("[SMD]imei:%s\n", imei_cmdline);
+			strncpy(imei, imei_cmdline, IMEI_LENGTH);
+		}
+		else
+		{
+			printk("[SMD]invalid imei:%s\n", imei_cmdline);
+		}
+	}
+
+	return 0;
+}
+__setup("oemandroidboot.imei=", check_imei);
+#endif // #ifdef WRITE_IMEI_TO_SMEM
+
+
 static int __devinit msm_smd_probe(struct platform_device *pdev)
 {
 	int ret;
+
+#ifdef WRITE_IMEI_TO_SMEM
+	void *imei_addr = NULL;
+#endif // #ifdef WRITE_IMEI_TO_SMEM
+
 
 	SMD_INFO("smd probe\n");
 	INIT_WORK(&probe_work, smd_channel_probe_worker);
@@ -3539,6 +3574,21 @@ static int __devinit msm_smd_probe(struct platform_device *pdev)
 	}
 
 	smd_initialized = 1;
+
+
+#ifdef WRITE_IMEI_TO_SMEM
+	if(imei == NULL || strlen(imei) != IMEI_LENGTH)
+	{
+		printk("[SMD]skip write imei\n");
+	}
+	else
+	{
+		printk("[SMD]write imei:%s\n", imei);
+		imei_addr = smem_alloc2(SMEM_ID_VENDOR2, IMEI_LENGTH + 1);
+		strncpy((char*)imei_addr, imei, IMEI_LENGTH);
+	}
+#endif // #ifdef WRITE_IMEI_TO_SMEM
+
 
 	smd_alloc_loopback_channel();
 	smsm_irq_handler(0, 0);

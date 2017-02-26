@@ -18,6 +18,50 @@
 #include "devices.h"
 #include "board-8930.h"
 
+
+#if 1
+static struct gpiomux_setting volume_key_actv_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+static struct gpiomux_setting volume_key_susp_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_OUT_LOW,
+};
+static struct gpiomux_setting camera_key_actv_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+static struct gpiomux_setting camera_key_susp_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+//Aaron_add 20120913 ,Bug 570 - fix auto wake up system!
+//	.pull = GPIOMUX_PULL_NONE,
+//	.dir = GPIOMUX_OUT_LOW,
+	.pull = GPIOMUX_PULL_UP,
+};
+#endif
+// Aaron
+
+//S:LO
+static struct gpiomux_setting sim_det_actv_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+	.dir = GPIOMUX_IN,
+};
+static struct gpiomux_setting sim_det_susp_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+	.dir = GPIOMUX_IN,
+};
+//E:LO
+
 /* GSBI10 UART configurations */
 static struct gpiomux_setting gsbi10_uart_cfg = {
 	.func = GPIOMUX_FUNC_2,
@@ -379,6 +423,8 @@ static struct msm_gpiomux_config msm8930_hsusb_configs[] = {
 };
 #endif
 
+
+#if 0
 static struct gpiomux_setting hap_lvl_shft_suspended_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -390,6 +436,8 @@ static struct gpiomux_setting hap_lvl_shft_active_config = {
 	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_UP,
 };
+#endif
+// Aaron
 
 static struct gpiomux_setting ap2mdm_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -891,6 +939,8 @@ static struct msm_gpiomux_config msm8960_synaptic_rmi4_configs[] __initdata = {
 	},
 };
 
+
+#if 0
 static struct msm_gpiomux_config hap_lvl_shft_config[] __initdata = {
 	{
 		.gpio = 47,
@@ -900,6 +950,8 @@ static struct msm_gpiomux_config hap_lvl_shft_config[] __initdata = {
 		},
 	},
 };
+#endif
+// Aaron
 
 static struct msm_gpiomux_config mdm_configs[] __initdata = {
 	/* AP2MDM_STATUS */
@@ -949,6 +1001,53 @@ static struct msm_gpiomux_config mdm_configs[] __initdata = {
 		}
 	}
 };
+
+
+#if 1
+static struct msm_gpiomux_config msm8930_keypad_configs[] __initdata = {
+	{
+		.gpio      = 47,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &volume_key_actv_cfg,
+			[GPIOMUX_SUSPENDED] = &volume_key_susp_cfg,
+		},
+	},
+	{
+		.gpio      = 48,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &volume_key_actv_cfg,
+			[GPIOMUX_SUSPENDED] = &volume_key_susp_cfg,
+		},
+	},
+	{
+		.gpio      = 68,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &camera_key_actv_cfg,
+			[GPIOMUX_SUSPENDED] = &camera_key_susp_cfg,
+		},
+	},
+	{
+		.gpio      = 69,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &camera_key_actv_cfg,
+			[GPIOMUX_SUSPENDED] = &camera_key_susp_cfg,
+		},
+	},
+};
+#endif
+// Aaron
+
+//S:LO
+static struct msm_gpiomux_config msm8930_sim_det_configs[] __initdata = {
+	{
+		.gpio      = 33,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &sim_det_actv_cfg,
+			[GPIOMUX_SUSPENDED] = &sim_det_susp_cfg,
+		},
+	},
+};
+//E:LO
 
 static struct msm_gpiomux_config msm8960_mdp_vsync_configs[] __initdata = {
 	{
@@ -1067,6 +1166,7 @@ static struct gpiomux_setting sd_det_line = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
+#if 0	// MK
 static struct msm_gpiomux_config msm8930_sd_det_config[] __initdata = {
 	{
 		.gpio = 94,	/* SD Card Detect Line */
@@ -1076,6 +1176,7 @@ static struct msm_gpiomux_config msm8930_sd_det_config[] __initdata = {
 		},
 	},
 };
+#endif
 
 static struct msm_gpiomux_config msm8930_sd_det_config_evt[] __initdata = {
 	{
@@ -1290,6 +1391,10 @@ int __init msm8930_init_gpiomux(void)
 #endif
 
 
+#if 1
+	msm_gpiomux_install(msm8930_keypad_configs,
+		ARRAY_SIZE(msm8930_keypad_configs));
+#endif
 // Aaron
 
 
@@ -1299,6 +1404,11 @@ int __init msm8930_init_gpiomux(void)
 			ARRAY_SIZE(msm8960_cyttsp_configs));
 #endif
 //Aaron end
+
+//S:LO
+	msm_gpiomux_install(msm8930_sim_det_configs,
+			ARRAY_SIZE(msm8930_sim_det_configs));
+//E:LO
 
 	msm_gpiomux_install(msm8960_slimbus_config,
 			ARRAY_SIZE(msm8960_slimbus_config));
@@ -1320,8 +1430,12 @@ int __init msm8930_init_gpiomux(void)
 
 	if (machine_is_msm8930_mtp() || machine_is_msm8930_fluid() ||
 		machine_is_msm8930_cdp()) {
+		
+		#if 0
 		msm_gpiomux_install(hap_lvl_shft_config,
 			ARRAY_SIZE(hap_lvl_shft_config));
+		#endif
+		// Aaron
 #ifdef MSM8930_PHASE_2
 		msm_gpiomux_install(msm8930_hsusb_configs,
 			ARRAY_SIZE(msm8930_hsusb_configs));
@@ -1348,8 +1462,10 @@ int __init msm8930_init_gpiomux(void)
 	msm_gpiomux_install(msm8960_mdp_vsync_configs,
 			ARRAY_SIZE(msm8960_mdp_vsync_configs));
 
+#if 0	// MK
 	msm_gpiomux_install(msm8930_sd_det_config,
 			ARRAY_SIZE(msm8930_sd_det_config));
+#endif
 
 /*S:andy, P/L sensor*/
 #ifdef ORG_VER
